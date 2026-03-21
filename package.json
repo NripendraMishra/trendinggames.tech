@@ -1,0 +1,12 @@
+{
+  "name": "pumpkin-collector-server",
+  "version": "1.0.0",
+  "description": "Multiplayer WebSocket server for Pumpkin Collector",
+  "main": "ws_server.js",
+  "scripts": {
+    "start": "node ws_server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
