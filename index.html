@@ -4,7 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="screen-orientation" content="landscape">
-    <title>Pumpkin Collector - Minecraft Style</title>
+    <title>Pumpkin Collector – Free 3D Minecraft-Style Browser Game | TrendingGames.tech</title>
+
+    <!-- SEO -->
+    <meta name="description" content="Play Pumpkin Collector free in your browser – a 3D Minecraft-style open-world adventure. Collect pumpkins, fight wolves and leopards, protect villagers, upgrade weapons, and challenge friends in real-time multiplayer. No download required!">
+    <meta name="keywords" content="pumpkin collector, minecraft browser game, 3D open world game, free online game, multiplayer browser game, survival game, pumpkin game, trendinggames">
+    <meta name="author" content="TrendingGames.tech">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#ff9900">
+
+    <!-- Open Graph (Facebook / Discord / WhatsApp) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="TrendingGames.tech">
+    <meta property="og:title" content="Pumpkin Collector – Free 3D Minecraft-Style Browser Game">
+    <meta property="og:description" content="Explore an open world, collect pumpkins, fight predators, protect villagers and play with friends – all in your browser, no download needed!">
+    <meta property="og:image" content="/pumpkin-collector/preview.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Pumpkin Collector – Free 3D Minecraft-Style Browser Game">
+    <meta name="twitter:description" content="Explore an open world, collect pumpkins, fight predators, protect villagers and play with friends – all in your browser, no download needed!">
+    <meta name="twitter:image" content="/pumpkin-collector/preview.png">
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KPQRKT2K0Z"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-KPQRKT2K0Z');
+    </script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
@@ -33,13 +63,69 @@
             #rotate-overlay { display: flex; }
         }
 
+        /* ---- Fake loader screen ---- */
+        #loader {
+            position: fixed; inset: 0; z-index: 9998;
+            background: #0a0a0a;
+            display: flex; flex-direction: column; align-items: stretch;
+            color: #fff; font-family: 'Courier New', monospace;
+        }
+        /* 728×90 banner at top of loader */
+        #loader-top-ad {
+            width: 100%; height: 90px; background: #000;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        /* Row below the top banner */
+        #loader-row {
+            flex: 1; display: flex; flex-direction: row; align-items: stretch;
+        }
+        #loader-center {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        #loader-icon { font-size: 72px; animation: loaderBob 1s ease-in-out infinite alternate; }
+        @keyframes loaderBob {
+            from { transform: translateY(0);    }
+            to   { transform: translateY(-12px); }
+        }
+        #loader h2 { font-size: 28px; color: #f90; letter-spacing: 4px; margin: 16px 0 8px; }
+        #loader-msg { font-size: 13px; color: #888; min-height: 20px; letter-spacing: 1px; margin-bottom: 24px; }
+        #loader-bar-bg {
+            width: 320px; height: 8px;
+            background: #222; border-radius: 4px; overflow: hidden;
+        }
+        #loader-bar {
+            height: 100%; width: 0%; background: #f90;
+            border-radius: 4px; transition: width 0.9s linear;
+        }
+        #loader-count { font-size: 13px; color: #555; margin-top: 10px; letter-spacing: 1px; }
+        /* Left panel — native banner */
+        #ad-panel-left {
+            width: 220px; min-width: 220px;
+            display: flex; align-items: center; justify-content: center;
+            padding: 10px; background: rgba(0,0,0,0.3);
+        }
+        /* Right panel — 4 × 320×50 stacked */
+        #ad-panel-right {
+            width: 340px; min-width: 340px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 8px; padding: 10px; background: rgba(0,0,0,0.3);
+        }
+        @media (max-width: 1100px) { #ad-panel-left, #ad-panel-right, #loader-top-ad { display: none; } }
+
+        /* ---- Blocker: original column layout ---- */
         #blocker {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.92); z-index: 100;
             display: flex; align-items: center; justify-content: center;
             flex-direction: column; color: #fff;
+        }
+        #blocker-content {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
             overflow-y: auto; -webkit-overflow-scrolling: touch;
-            padding: 20px 12px;
+            padding: 20px 12px; width: 100%;
         }
         #blocker h1 {
             font-size: 48px; color: #f90; text-shadow: 3px 3px 0 #000;
@@ -66,7 +152,7 @@
 
         /* Mobile-specific start screen — compact, no keyboard hints */
         @media (max-width: 900px) {
-            #blocker { align-items: stretch; justify-content: flex-start; }
+            #blocker-content { align-items: stretch; justify-content: flex-start; }
             #blocker h1 { font-size: 26px; margin-bottom: 4px; text-align: center; }
             #blocker h2 { font-size: 14px; margin-bottom: 10px; text-align: center; }
             .instructions-desktop { display: none; } /* hide keyboard controls on touch */
@@ -151,6 +237,16 @@
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             z-index: 50; pointer-events: none;
         }
+        /* Fullscreen restore button — above attack button, touch only */
+        #fs-btn {
+            position: absolute; right: 0; bottom: 82px;
+            width: 62px; height: 40px;
+            background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.25);
+            color: #fff; font-size: 18px; border-radius: 8px;
+            display: none; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 52;
+        }
+        #fs-btn:active { background: rgba(255,153,0,0.45); border-color: #f90; }
         #health-bar-bg {
             width: 300px; height: 20px; background: rgba(0,0,0,0.7);
             border: 2px solid #555; border-radius: 3px;
@@ -317,6 +413,37 @@
         /* Sprint active indicator */
         #btn-sprint.pressed { background: rgba(0,200,100,0.55); border-color: #0f8; }
 
+        /* Ad countdown overlay */
+        #ad-overlay {
+            display: none; position: fixed; inset: 0; z-index: 300;
+            background: rgba(0,0,0,0.88);
+            flex-direction: column; align-items: center; justify-content: center;
+            color: #fff; text-align: center;
+        }
+        #ad-overlay p { font-size: 18px; color: #aaa; margin-bottom: 12px; letter-spacing: 1px; }
+        #ad-countdown {
+            font-size: 96px; font-weight: bold; color: #f90;
+            text-shadow: 0 0 30px #f90; line-height: 1;
+        }
+        #ad-reward-msg { font-size: 22px; margin-top: 20px; color: #fff; }
+
+        /* FREE +5 ad button — sits in HUD top bar */
+        #ad-coins-btn {
+            cursor: pointer; pointer-events: auto;
+            color: #4f4; border-color: #4f4;
+            user-select: none; animation: freeAdPulse 2s ease-in-out infinite;
+            font-size: 13px;
+        }
+        #ad-coins-btn:hover { background: rgba(68,255,68,0.15); }
+        #ad-coins-btn.ad-btn-cooldown {
+            color: #666; border-color: #444;
+            cursor: not-allowed; animation: none; opacity: 0.7;
+        }
+        @keyframes freeAdPulse {
+            0%, 100% { box-shadow: none; }
+            50%       { box-shadow: 0 0 8px #4f4; }
+        }
+
         /* Look-area hint (brief, fades) */
         #look-hint {
             position: fixed; top: 50%; right: 20px;
@@ -333,49 +460,96 @@
         <p>Please rotate your device<br>to <strong>landscape</strong> mode to play</p>
     </div>
 
-    <div id="blocker">
-        <h1>🎃 PUMPKIN COLLECTOR 🎃</h1>
-        <h2>Minecraft Style Adventure</h2>
-        <div class="instructions">
-            <!-- Desktop keyboard controls — hidden on mobile -->
-            <div class="instructions-desktop">
-                <p><span>WASD</span> - Move</p>
-                <p><span>MOUSE</span> - Look around</p>
-                <p><span>LEFT CLICK / F</span> - Attack / Shoot</p>
-                <p><span>SPACE</span> - Jump &nbsp;|&nbsp; <span>SHIFT</span> - Sprint</p>
-                <p><span>E</span> - Collect pumpkin / Interact</p>
-                <p><span>0</span> - Sword | <span>1</span> - Pistol | <span>2</span> - Shotgun</p>
-                <p><span>3</span> - Rifle | <span>4</span> - Sniper</p>
-                <p><span>B</span> - Open/Close Shop &nbsp;|&nbsp; <span>ESC</span> - Pause</p>
-                <hr style="border-color:#555; margin:12px 0">
+    <!-- Fake asset loader with ads (shown first, then reveals #blocker) -->
+    <div id="loader">
+
+        <!-- 728×90 banner across the top of the loader -->
+        <div id="loader-top-ad">
+            <script>atOptions={'key':'e3531973283ffa51e464905f502f3eb9','format':'iframe','height':90,'width':728,'params':{}};</script>
+            <script src="https://www.highperformanceformat.com/e3531973283ffa51e464905f502f3eb9/invoke.js"></script>
+        </div>
+
+        <!-- Row: left native | centre loader | right 4×320×50 -->
+        <div id="loader-row">
+
+            <!-- Left: 1 Native Banner -->
+            <div id="ad-panel-left">
+                <script async="async" data-cfasync="false" src="https://pl28960532.profitablecpmratenetwork.com/cbd35e716661e6ac8e9a00a8dedaaeea/invoke.js"></script>
+                <div id="container-cbd35e716661e6ac8e9a00a8dedaaeea"></div>
             </div>
-            <p>🎃 Collect pumpkins scattered across the world</p>
-            <p>🛡️ Steal pumpkins from guards without being caught</p>
-            <p>⚔️ Protect villagers from predators for rewards</p>
-            <p>🏪 Sell pumpkins for coins, upgrade your weapons</p>
-        </div>
-        <div class="difficulty-panel">
-            <div class="difficulty-title">SELECT DIFFICULTY</div>
-            <div class="difficulty-buttons">
-                <button class="difficulty-btn" data-difficulty="easy">EASY</button>
-                <button class="difficulty-btn active" data-difficulty="normal">NORMAL</button>
-                <button class="difficulty-btn" data-difficulty="hard">HARD</button>
+
+            <!-- Centre loader content -->
+            <div id="loader-center">
+                <div id="loader-icon">🎃</div>
+                <h2>PUMPKIN COLLECTOR</h2>
+                <div id="loader-msg">Initialising world...</div>
+                <div id="loader-bar-bg"><div id="loader-bar"></div></div>
+                <div id="loader-count">Loading... 10s</div>
             </div>
-            <div class="difficulty-help" id="difficulty-help">Normal: balanced guards, predators and pumpkin spawn.</div>
+
+            <!-- Right: 4 × 320×50 banners stacked vertically -->
+            <div id="ad-panel-right">
+                <script>atOptions={'key':'da4e4db1eac2cdf2b33e1c1ab744f69a','format':'iframe','height':50,'width':320,'params':{}};</script>
+                <script src="https://www.highperformanceformat.com/da4e4db1eac2cdf2b33e1c1ab744f69a/invoke.js"></script>
+                <script>atOptions={'key':'da4e4db1eac2cdf2b33e1c1ab744f69a','format':'iframe','height':50,'width':320,'params':{}};</script>
+                <script src="https://www.highperformanceformat.com/da4e4db1eac2cdf2b33e1c1ab744f69a/invoke.js"></script>
+                <script>atOptions={'key':'da4e4db1eac2cdf2b33e1c1ab744f69a','format':'iframe','height':50,'width':320,'params':{}};</script>
+                <script src="https://www.highperformanceformat.com/da4e4db1eac2cdf2b33e1c1ab744f69a/invoke.js"></script>
+                <script>atOptions={'key':'da4e4db1eac2cdf2b33e1c1ab744f69a','format':'iframe','height':50,'width':320,'params':{}};</script>
+                <script src="https://www.highperformanceformat.com/da4e4db1eac2cdf2b33e1c1ab744f69a/invoke.js"></script>
+            </div>
+
         </div>
-        <div id="mp-section">
-            <div class="mp-divider">─── MULTIPLAYER (optional) ───</div>
-            <input id="room-code-input" type="text" maxlength="5" inputmode="numeric"
-                   placeholder="Enter 5-digit code to join" autocomplete="off">
-            <div id="mp-status"></div>
+    </div>
+
+    <div id="blocker" style="display:none">
+        <!-- Centre game menu -->
+        <div id="blocker-content">
+            <h1>🎃 PUMPKIN COLLECTOR 🎃</h1>
+            <h2>Minecraft Style Adventure</h2>
+            <div class="instructions">
+                <!-- Desktop keyboard controls — hidden on mobile -->
+                <div class="instructions-desktop">
+                    <p><span>WASD</span> - Move</p>
+                    <p><span>MOUSE</span> - Look around</p>
+                    <p><span>LEFT CLICK / F</span> - Attack / Shoot</p>
+                    <p><span>SPACE</span> - Jump &nbsp;|&nbsp; <span>SHIFT</span> - Sprint</p>
+                    <p><span>E</span> - Collect pumpkin / Interact</p>
+                    <p><span>0</span> - Sword | <span>1</span> - Pistol | <span>2</span> - Shotgun</p>
+                    <p><span>3</span> - Rifle | <span>4</span> - Sniper</p>
+                    <p><span>B</span> - Open/Close Shop &nbsp;|&nbsp; <span>ESC</span> - Pause</p>
+                    <hr style="border-color:#555; margin:12px 0">
+                </div>
+                <p>🎃 Collect pumpkins scattered across the world</p>
+                <p>🛡️ Steal pumpkins from guards without being caught</p>
+                <p>⚔️ Protect villagers from predators for rewards</p>
+                <p>🏪 Sell pumpkins for coins, upgrade your weapons</p>
+            </div>
+            <div class="difficulty-panel">
+                <div class="difficulty-title">SELECT DIFFICULTY</div>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn" data-difficulty="easy">EASY</button>
+                    <button class="difficulty-btn active" data-difficulty="normal">NORMAL</button>
+                    <button class="difficulty-btn" data-difficulty="hard">HARD</button>
+                </div>
+                <div class="difficulty-help" id="difficulty-help">Normal: balanced guards, predators and pumpkin spawn.</div>
+            </div>
+            <div id="mp-section">
+                <div class="mp-divider">─── MULTIPLAYER (optional) ───</div>
+                <input id="room-code-input" type="text" maxlength="5" inputmode="numeric"
+                       placeholder="Enter 5-digit code to join" autocomplete="off">
+                <div id="mp-status"></div>
+            </div>
+            <button class="start-btn" id="start-btn">CLICK TO PLAY</button>
         </div>
-        <button class="start-btn" id="start-btn">CLICK TO PLAY</button>
+
     </div>
 
     <div id="hud" style="display:none">
         <div id="hud-top">
             <div class="hud-box">🎃 Pumpkins: <span id="pumpkin-count">0</span></div>
             <div class="hud-box">🪙 Coins: <span id="coin-count">0</span></div>
+            <div id="ad-coins-btn" class="hud-box" onclick="game.watchAdForReward('coins')" style="display:none">🪙 FREE +5</div>
             <div class="hud-box">⚔️ <span id="weapon-level">Pistol</span></div>
             <div class="hud-box" id="hp-box">❤️ HP: <span id="hp-display">100</span></div>
             <div class="hud-box" id="mp-hud" style="display:none">
@@ -428,7 +602,21 @@
         <h1>GAME OVER</h1>
         <p>Pumpkins collected: <span id="final-pumpkins">0</span></p>
         <p>Coins earned: <span id="final-coins">0</span></p>
-        <button onclick="location.reload()">PLAY AGAIN</button>
+        <button id="ad-revive-btn" onclick="game.watchAdForReward('revive')"
+                style="margin-top:20px;padding:14px 40px;font-size:17px;background:#27ae60;border:none;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;border-radius:4px;color:#fff;letter-spacing:1px;">
+            📺 WATCH AD TO REVIVE
+        </button>
+        <button onclick="location.reload()"
+                style="margin-top:10px;padding:15px 40px;font-size:18px;background:#f90;border:none;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;border-radius:4px;">
+            PLAY AGAIN
+        </button>
+    </div>
+
+    <!-- Ad countdown overlay -->
+    <div id="ad-overlay">
+        <p>AD PLAYING IN BACKGROUND</p>
+        <div id="ad-countdown">6</div>
+        <div id="ad-reward-msg"></div>
     </div>
 
     <!-- Touch controls overlay (shown only on touch devices) -->
@@ -445,6 +633,7 @@
             <div id="btn-collect" class="touch-btn" title="Collect">🎃</div>
             <div id="btn-sprint"  class="touch-btn" title="Sprint (hold)">🏃</div>
             <div id="btn-jump"    class="touch-btn" title="Jump">⬆️</div>
+            <div id="fs-btn" onclick="game._restoreFullscreen()" title="Fullscreen">⛶</div>
             <div id="btn-attack"  class="touch-btn" title="Attack">⚔️</div>
         </div>
     </div>
@@ -452,5 +641,48 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="game.js"></script>
+
+    <script>
+        (function () {
+            const steps = [
+                'Loading terrain chunks...',
+                'Spawning pumpkins...',
+                'Building world geometry...',
+                'Loading audio assets...',
+                'Initialising AI characters...',
+                'Placing guards & villagers...',
+                'Loading weapon models...',
+                'Setting up multiplayer...',
+                'Compiling shaders...',
+                'Almost ready...'
+            ];
+            const msgEl   = document.getElementById('loader-msg');
+            const barEl   = document.getElementById('loader-bar');
+            const countEl = document.getElementById('loader-count');
+            let count = 10, step = 0;
+
+            // Kick off the bar immediately
+            barEl.style.width = '0%';
+
+            const tick = setInterval(function () {
+                count--;
+                step++;
+                barEl.style.width = ((10 - count) / 10 * 100) + '%';
+                msgEl.textContent  = steps[step % steps.length];
+                countEl.textContent = count > 0 ? 'Loading... ' + count + 's' : 'Done!';
+
+                if (count <= 0) {
+                    clearInterval(tick);
+                    const loader = document.getElementById('loader');
+                    loader.style.transition = 'opacity 0.4s';
+                    loader.style.opacity = '0';
+                    setTimeout(function () {
+                        loader.style.display = 'none';
+                        document.getElementById('blocker').style.display = 'flex';
+                    }, 400);
+                }
+            }, 1000);
+        })();
+    </script>
 </body>
 </html>

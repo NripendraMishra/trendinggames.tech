@@ -259,6 +259,13 @@ class PumpkinCollectorGame {
         this.setupDifficultySelector();
         this.setupTouchControls();
 
+        // Global: whenever user returns to this tab on mobile, always restore fullscreen
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && this.touch.mode && this.isRunning) {
+                this._restoreFullscreen();
+            }
+        });
+
         // Render loop (but don't update game logic until started)
         this.animate();
     }
@@ -271,7 +278,9 @@ class PumpkinCollectorGame {
         if (!('ontouchstart' in window) && navigator.maxTouchPoints < 1) return;
 
         this.touch.mode = true;
-        // Touch controls are shown only after the game starts (in startGame)
+        // Show fullscreen restore button on mobile
+        const fsBtn = document.getElementById('fs-btn');
+        if (fsBtn) fsBtn.style.display = 'flex';
 
         // Lock to landscape where the Screen Orientation API is available
         if (screen.orientation && screen.orientation.lock) {
@@ -377,7 +386,10 @@ class PumpkinCollectorGame {
         document.addEventListener('touchcancel', onTouchEnd, { passive: true });
 
         // ---- Action buttons ----
-        bindBtn('btn-attack',  () => { if (this.isRunning) this.attack(); });
+        bindBtn('btn-attack',  () => {
+            if (!this.isRunning) return;
+            if (this._nearCollectible) this.interact(); else this.attack();
+        });
         bindBtn('btn-jump',    () => {
             if (this.isRunning && this.player.onGround) {
                 this.player.velocity.y = this.player.jumpForce;
@@ -447,6 +459,7 @@ class PumpkinCollectorGame {
         document.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
             if (e.code === 'KeyE' && this.isLocked) this.interact();
+            if (e.code === 'KeyC' && this.isLocked) this.watchAdForReward('coins');
             if (e.code === 'KeyF' && this.isLocked) this.attack();
             if (e.code === 'KeyB' && this.isLocked) this.toggleShop();
             // Weapon switching: 0=Sword, 1=Pistol, 2=Shotgun, 3=Rifle, 4=Sniper
@@ -520,9 +533,19 @@ class PumpkinCollectorGame {
     }
 
     _proceedGameStart() {
+        // Remove all loader ad elements from DOM when game starts
+        ['loader-top-ad', 'ad-panel-left', 'ad-panel-right'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        });
+
         document.getElementById('blocker').style.display = 'none';
         document.getElementById('hud').style.display = 'block';
         document.getElementById('health-bar-container').style.display = 'block';
+        // Show FREE +5 immediately with 60s cooldown countdown
+        document.getElementById('ad-coins-btn').style.display = 'block';
+        this._resetAdCoinBtn();
+
         if (!this.touch.mode) {
             this.renderer.domElement.requestPointerLock();
         } else {
@@ -540,13 +563,14 @@ class PumpkinCollectorGame {
             this.activeDifficulty = this.difficultyProfiles[this.difficulty] || this.difficultyProfiles.normal;
             this.showMessage(`Difficulty: ${this.activeDifficulty.label}`);
             this.generateWorld();
-            // Non-host players spawn at a random location
+            // Non-host players spawn at a random location, then snap near Pn-1 once their position is known
             if (this.mp.enabled && this.mp.playerId && this.mp.playerId > 1) {
                 const ang = Math.random() * Math.PI * 2;
                 const dst = 20 + Math.random() * 30;
                 const sx  = Math.cos(ang) * dst;
                 const sz  = Math.sin(ang) * dst;
                 this.player.position.set(sx, this.getHeight(sx, sz) + 3, sz);
+                this.mp.spawnNearPrevPlayer = true;
             }
             this._showMpHud();
         }
@@ -583,15 +607,15 @@ class PumpkinCollectorGame {
                     if (this.isRunning) this.showMessage(`Player ${data.playerId} left.`);
                     break;
                 case 'snatched': {
-                    // Someone snatched our pumpkins
-                    const stolen = Math.min(data.amount || 0, this.player.pumpkins);
-                    this.player.pumpkins = Math.max(0, this.player.pumpkins - stolen);
+                    // Opponent snatched — fixed -12 penalty
+                    const penalty = Math.min(12, this.player.pumpkins);
+                    this.player.pumpkins = Math.max(0, this.player.pumpkins - 12);
                     this.updateHUD();
                     // Start 10s truce against the attacker
                     const rp = this.mp.remotePlayers[data.fromId];
                     if (rp) { rp.snatchHp = 60; rp.cooldown = 10; }
-                    if (stolen > 0) {
-                        this.showAlert(`P${data.fromId} snatched ${stolen} 🎃 from you!`);
+                    if (penalty > 0) {
+                        this.showAlert(`P${data.fromId} stole from you! -12 🎃`);
                     }
                     break;
                 }
@@ -668,9 +692,22 @@ class PumpkinCollectorGame {
     _updateRemotePlayer(id, state) {
         if (!this.mp.remotePlayers[id]) this._createRemotePlayer(id);
         const rp = this.mp.remotePlayers[id];
-        rp.mesh.position.set(state.x, state.y, state.z);
+        // Use locally-computed terrain height so remote players stand on the ground,
+        // not at camera/eye level (state.y = terrainH + player.height).
+        const groundY = this.getHeight(state.x, state.z);
+        rp.mesh.position.set(state.x, groundY, state.z);
         rp.mesh.rotation.y = (state.yaw || 0) + Math.PI;
         if (state.pumpkins !== undefined) rp.pumpkins = state.pumpkins;
+
+        // Snap new player to within 15m of Pn-1 on first received state
+        if (this.mp.spawnNearPrevPlayer && id === this.mp.playerId - 1) {
+            const ang = Math.random() * Math.PI * 2;
+            const dst = 5 + Math.random() * 10;
+            const sx = state.x + Math.cos(ang) * dst;
+            const sz = state.z + Math.sin(ang) * dst;
+            this.player.position.set(sx, this.getHeight(sx, sz) + 3, sz);
+            this.mp.spawnNearPrevPlayer = false;
+        }
     }
 
     _removeRemotePlayer(id) {
@@ -1530,16 +1567,18 @@ class PumpkinCollectorGame {
 
         // Terrain collision
         const terrainH = this.getHeight(this.player.position.x, this.player.position.z);
-        const feetY = terrainH + this.player.height;
 
         // Water - don't sink below water level
         const waterLevel = -5;
         const minY = Math.max(terrainH, waterLevel) + this.player.height;
 
-        if (this.player.position.y < minY) {
+        if (this.player.position.y <= minY) {
+            // Snap to ground (handles both sinking below and walking onto higher terrain)
             this.player.position.y = minY;
             this.player.velocity.y = 0;
             this.player.onGround = true;
+        } else {
+            this.player.onGround = false;
         }
 
         // World bounds
@@ -1660,6 +1699,13 @@ class PumpkinCollectorGame {
                 this.spawnCollectionEffect(collectPos);
                 this.showMessage('+1 Pumpkin! 🎃');
                 this.updateHUD();
+                if (typeof gtag === 'function') {
+                    gtag('event', 'pumpkin_collected', {
+                        total_pumpkins: this.player.pumpkins,
+                        difficulty:     this.difficulty,
+                        multiplayer:    this.mp.enabled
+                    });
+                }
 
                 // Caught red-handed? Alert any guard within detection range that can see the player
                 let caughtByGuard = false;
@@ -1864,21 +1910,19 @@ class PumpkinCollectorGame {
                 for (const [rpId, rp] of Object.entries(this.mp.remotePlayers)) {
                     const numId = Number(rpId);
                     if (rp.cooldown > 0) continue;  // truce active
-                    if (b.mesh.position.distanceTo(rp.mesh.position) < 1.5) {
+                    // XZ-only distance — avoids Y-gap between bullet height and player feet
+                    const dxB = b.mesh.position.x - rp.mesh.position.x;
+                    const dzB = b.mesh.position.z - rp.mesh.position.z;
+                    if (Math.sqrt(dxB * dxB + dzB * dzB) < 1.5) {
                         rp.snatchHp -= b.damage;
                         if (rp.snatchHp <= 0) {
                             rp.snatchHp = 60;
                             rp.cooldown = 10;
-                            const amount = Math.min(20, rp.pumpkins);
-                            if (amount > 0) {
-                                this.player.pumpkins += amount;
-                                this.showMessage(`Snatched ${amount} 🎃 from P${numId}!`);
-                                this.updateHUD();
-                                if (this.mp.ws && this.mp.ws.readyState === WebSocket.OPEN) {
-                                    this.mp.ws.send(JSON.stringify({ type: 'snatch', targetId: numId, amount }));
-                                }
-                            } else {
-                                this.showMessage(`P${numId} has no pumpkins to snatch!`);
+                            this.player.pumpkins += 12;
+                            this.showMessage(`Snatched +12 🎃 from P${numId}!`);
+                            this.updateHUD();
+                            if (this.mp.ws && this.mp.ws.readyState === WebSocket.OPEN) {
+                                this.mp.ws.send(JSON.stringify({ type: 'snatch', targetId: numId, amount: 12 }));
                             }
                         } else {
                             this.showMessage(`P${numId} snatch: ${Math.max(0, Math.round(rp.snatchHp))}/60 HP`);
@@ -1978,24 +2022,23 @@ class PumpkinCollectorGame {
             for (const [rpId, rp] of Object.entries(this.mp.remotePlayers)) {
                 const numId = Number(rpId);
                 if (rp.cooldown > 0) continue;
-                const dist = pos.distanceTo(rp.mesh.position);
+                // XZ-only distance and direction — camera height vs feet would break 3D checks
+                const dxM = rp.mesh.position.x - pos.x;
+                const dzM = rp.mesh.position.z - pos.z;
+                const dist = Math.sqrt(dxM * dxM + dzM * dzM);
                 if (dist < range) {
-                    const toRp = new THREE.Vector3().subVectors(rp.mesh.position, pos).normalize();
-                    if (fwd.dot(toRp) > 0.5) {
+                    const toRp = new THREE.Vector3(dxM, 0, dzM).normalize();
+                    const fwdXZ = new THREE.Vector3(fwd.x, 0, fwd.z).normalize();
+                    if (fwdXZ.dot(toRp) > 0.5) {
                         rp.snatchHp -= damage;
                         if (rp.snatchHp <= 0) {
                             rp.snatchHp = 60;
                             rp.cooldown = 10;
-                            const amount = Math.min(20, rp.pumpkins);
-                            if (amount > 0) {
-                                this.player.pumpkins += amount;
-                                this.showMessage(`Snatched ${amount} 🎃 from P${numId}!`);
-                                this.updateHUD();
-                                if (this.mp.ws && this.mp.ws.readyState === WebSocket.OPEN) {
-                                    this.mp.ws.send(JSON.stringify({ type: 'snatch', targetId: numId, amount }));
-                                }
-                            } else {
-                                this.showMessage(`P${numId} has no pumpkins!`);
+                            this.player.pumpkins += 12;
+                            this.showMessage(`Snatched +12 🎃 from P${numId}!`);
+                            this.updateHUD();
+                            if (this.mp.ws && this.mp.ws.readyState === WebSocket.OPEN) {
+                                this.mp.ws.send(JSON.stringify({ type: 'snatch', targetId: numId, amount: 12 }));
                             }
                         }
                         return;
@@ -2172,20 +2215,20 @@ class PumpkinCollectorGame {
         if (this._forceAttackTimer <= 0) {
             this._forceAttackTimer = 25 + Math.random() * 15;
 
-            // Only trigger if no predator is already actively hunting
-            const alreadyHunting = this.predators.some(p =>
+            // Only trigger if fewer than 2 predators are already actively hunting
+            const alreadyHunting = this.predators.filter(p =>
                 p.userData.state === 'hunting' && p.userData.target !== null
-            );
+            ).length;
 
-            if (!alreadyHunting) {
+            if (alreadyHunting < 2) {
                 const candidates = [];
                 for (const v of this.villagers) {
                     const d = playerPos.distanceTo(v.position);
-                    if (d < 60) candidates.push({ type: 'villager', obj: v, dist: d });
+                    if (d < 100) candidates.push({ type: 'villager', obj: v, dist: d });
                 }
                 for (const g of this.guards) {
                     const d = playerPos.distanceTo(g.position);
-                    if (d < 60) candidates.push({ type: 'guard', obj: g, dist: d });
+                    if (d < 100) candidates.push({ type: 'guard', obj: g, dist: d });
                 }
                 candidates.push({ type: 'player', obj: null, dist: 0 });
 
@@ -2196,7 +2239,7 @@ class PumpkinCollectorGame {
                 let bestDist = Infinity;
                 for (const p of this.predators) {
                     const d = playerPos.distanceTo(p.position);
-                    if (d < 80 && p.userData.state === 'roaming' && d < bestDist) {
+                    if (d < 100 && p.userData.state === 'roaming' && d < bestDist) {
                         bestDist = d;
                         attacker = p;
                     }
@@ -2234,6 +2277,8 @@ class PumpkinCollectorGame {
             } // end !alreadyHunting
         }
 
+        const huntingCount = this.predators.filter(p => p.userData.state === 'hunting').length;
+
         for (let i = this.predators.length - 1; i >= 0; i--) {
             const pred = this.predators[i];
             const ud = pred.userData;
@@ -2242,7 +2287,7 @@ class PumpkinCollectorGame {
             if (ud.attackCooldown > 0) ud.attackCooldown -= dt;
 
             const distToPlayer = playerPos.distanceTo(pos);
-            const inPlayerRange = distToPlayer < 80;
+            const inPlayerRange = distToPlayer < 100;
 
             // Check for nearby villagers to hunt
             let nearestVillager = null;
@@ -2291,14 +2336,14 @@ class PumpkinCollectorGame {
                     }
                 }
                 // else target === 'player': keep hunting player until give-up
-            } else if (nearestVillager && (!nearestGuard || nearestVDist <= nearestGDist)) {
+            } else if (huntingCount < 2 && nearestVillager && (!nearestGuard || nearestVDist <= nearestGDist)) {
                 ud.state = 'hunting';
                 ud.target = 'villager';
                 ud.huntingVillager = nearestVillager;
                 ud.huntingGuard = null;
                 nearestVillager.userData.beingAttacked = true;
                 nearestVillager.userData.attacker = pred;
-            } else if (nearestGuard) {
+            } else if (huntingCount < 2 && nearestGuard) {
                 ud.state = 'hunting';
                 ud.target = 'guard';
                 ud.huntingGuard = nearestGuard;
@@ -2366,13 +2411,13 @@ class PumpkinCollectorGame {
                     // Attack
                     if (dist < ud.attackRange && ud.attackCooldown <= 0) {
                         ud.attackCooldown = 1.5;
-                        // Leopard attack sound (rate-limited so it doesn't spam)
-                        if (this._leopardCooldown <= 0) {
-                            this.sfx.leopard.currentTime = 0;
-                            this.sfx.leopard.play().catch(() => {});
-                            this._leopardCooldown = 2.5;
-                        }
                         if (ud.target === 'player') {
+                            // Leopard attack sound — only when hitting the player
+                            if (this._leopardCooldown <= 0) {
+                                this.sfx.leopard.currentTime = 0;
+                                this.sfx.leopard.play().catch(() => {});
+                                this._leopardCooldown = 2.5;
+                            }
                             this.player.hp -= ud.damage;
                             this.showAlert(`Wolf attack! -${ud.damage} HP!`);
                             this.updateHUD();
@@ -2695,12 +2740,106 @@ class PumpkinCollectorGame {
         this.alertTimeout = setTimeout(() => el.style.opacity = 0, 3000);
     }
 
+    _resetAdCoinBtn() {
+        const btn  = document.getElementById('ad-coins-btn');
+        const base = this.touch.mode ? '🪙 FREE +5' : '🪙 FREE +5 (C)';
+        this._adCoinReady = false;
+        btn.classList.add('ad-btn-cooldown');
+        let cd = 60;
+        btn.textContent = base + ' · ' + cd + 's';
+        const tick = setInterval(() => {
+            if (!this.isRunning) { clearInterval(tick); return; }
+            cd--;
+            if (cd <= 0) {
+                clearInterval(tick);
+                this._adCoinReady = true;
+                btn.classList.remove('ad-btn-cooldown');
+                btn.textContent = base;
+            } else {
+                btn.textContent = base + ' · ' + cd + 's';
+            }
+        }, 1000);
+    }
+
     gameOver() {
         this.isRunning = false;
         document.exitPointerLock();
         document.getElementById('game-over').style.display = 'flex';
+        document.getElementById('ad-coins-btn').style.display = 'none';
         document.getElementById('final-pumpkins').textContent = this.player.pumpkins;
         document.getElementById('final-coins').textContent = this.player.totalCoinsEarned;
+    }
+
+    watchAdForReward(type) {
+        if (type === 'coins' && !this._adCoinReady) return;
+        // Open Adsterra SmartLink — try to keep focus on game tab
+        const adWin = window.open('https://www.profitablecpmratenetwork.com/p6hirw8jd?key=f3fc10bb15115938e85e09f28c16e67f', '_blank', 'noopener,noreferrer');
+        if (adWin) { try { adWin.blur(); } catch(e) {} }
+        window.focus();
+
+        // Pause game loop
+        this._adWatching = true;
+
+        // Show countdown overlay
+        const overlay   = document.getElementById('ad-overlay');
+        const countEl   = document.getElementById('ad-countdown');
+        const msgEl     = document.getElementById('ad-reward-msg');
+
+        msgEl.textContent = type === 'revive' ? '🟢 Reviving after countdown…' : '🪙 +5 Coins after countdown…';
+        overlay.style.display = 'flex';
+
+        let count = 6;
+        countEl.textContent = count;
+
+        const tick = setInterval(() => {
+            count--;
+            countEl.textContent = count;
+            if (count <= 0) {
+                clearInterval(tick);
+                overlay.style.display = 'none';
+                this._adWatching = false;
+
+                if (type === 'revive') {
+                    document.getElementById('game-over').style.display = 'none';
+                    this.player.hp = this.player.maxHp;
+                    this.isRunning = true;
+                    this.updateHUD();
+                    this.showMessage('Revived! ❤️');
+                } else {
+                    this.player.coins += 5;
+                    this.updateHUD();
+                    this.showMessage('+5 Coins! 🪙');
+                    this._resetAdCoinBtn();
+                }
+
+                // Restore fullscreen at countdown end (global visibilitychange handles the tab-return case)
+                if (this.touch.mode) this._restoreFullscreen();
+            }
+        }, 1000);
+    }
+
+    _restoreFullscreen() {
+        // Check actual screen dimensions — fullscreen is lost when window is smaller than screen
+        const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement ||
+                             (window.innerHeight >= screen.height - 10);
+        if (isFullscreen) return;
+
+        const el = document.documentElement;
+        const doFS = () => {
+            if (document.fullscreenElement || document.webkitFullscreenElement) return;
+            if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        };
+
+        // Try immediately (works on Android Chrome from visibilitychange)
+        doFS();
+
+        // iOS Safari requires a real user gesture — fire on next touch
+        const onTouch = () => {
+            document.removeEventListener('touchstart', onTouch, true);
+            doFS();
+        };
+        document.addEventListener('touchstart', onTouch, { once: true, capture: true });
     }
 
     // ============================================================
@@ -2973,6 +3112,29 @@ class PumpkinCollectorGame {
 
         document.getElementById('crosshair').textContent = '+';
         document.getElementById('crosshair').style.color = '#fff';
+
+        // On mobile: switch attack button to collect icon when near any collectible
+        if (this.touch.mode) {
+            let nearCollect = false;
+            for (const p of this.pumpkins) {
+                if (!p.userData.collected && pos.distanceTo(p.position) < 5) { nearCollect = true; break; }
+            }
+            if (!nearCollect) {
+                for (const h of this.herbs) {
+                    if (!h.userData.collected && pos.distanceTo(h.position) < 5) { nearCollect = true; break; }
+                }
+            }
+            if (!nearCollect) {
+                for (const g of this.guards) {
+                    if (pos.distanceTo(g.position) < 5 && g.userData.alertLevel === 0) { nearCollect = true; break; }
+                }
+            }
+            this._nearCollectible = nearCollect;
+            const ab = document.getElementById('btn-attack');
+            ab.textContent  = nearCollect ? '🎃' : '⚔️';
+            ab.style.background = nearCollect ? 'rgba(255,153,0,0.65)' : 'rgba(190,40,40,0.65)';
+            ab.style.borderColor = nearCollect ? 'rgba(255,200,0,0.7)' : 'rgba(255,100,100,0.7)';
+        }
     }
 
     // ============================================================
@@ -3026,7 +3188,7 @@ class PumpkinCollectorGame {
     animate() {
         requestAnimationFrame(() => this.animate());
 
-        if (!this.isRunning) {
+        if (!this.isRunning || this._adWatching) {
             this.renderer.render(this.scene, this.camera);
             return;
         }
