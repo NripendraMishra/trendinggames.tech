@@ -496,7 +496,13 @@ class PumpkinCollectorGame {
         const proceed = () => { if (settled) return; settled = true; this._proceedGameStart(); };
 
         try {
-            const ws = new WebSocket('ws://localhost:8765');
+            // Automatically use 'wss://' if the site is loaded over 'https://'
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // Automatically use the VPS domain instead of hardcoding localhost
+            const host = window.location.hostname || 'localhost';
+            const wsUrl = `${protocol}//${host}:8765`;
+            
+            const ws = new WebSocket(wsUrl);
             const timeout = setTimeout(() => { try { ws.close(); } catch(e){} proceed(); }, 1500);
             ws.onopen = () => {
                 clearTimeout(timeout);

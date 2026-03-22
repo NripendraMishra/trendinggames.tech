@@ -30,7 +30,36 @@ function broadcast(room, excludeId, obj) {
     }
 }
 
-const wss = new WebSocketServer({ host: '0.0.0.0', port: PORT });
+// ---------------------------------------------------------
+// WSS (Secure WebSocket) SETUP
+// ---------------------------------------------------------
+// To use WSS (wss://), you need to provide your SSL certificates.
+// Update the paths below to point to your VPS's SSL certs (e.g., Let's Encrypt).
+const https = require('https');
+const fs = require('fs');
+
+let server;
+let isSecure = false;
+
+try {
+    // If these files exist, start as an HTTPS/WSS server
+    const options = {
+        key: fs.readFileSync('./cert/privkey.pem'),       // <--- UPDATE PATH TO YOUR PRIVATE KEY
+        cert: fs.readFileSync('./cert/fullchain.pem')     // <--- UPDATE PATH TO YOUR CERTIFICATE
+    };
+    server = https.createServer(options);
+    server.listen(PORT, '0.0.0.0');
+    isSecure = true;
+    console.log('✅ Loaded SSL certificates for secure WSS connection.');
+} catch (e) {
+    // Fallback for local development
+    console.log('⚠️ SSL certificates not found (or paths are incorrect).');
+    console.log('   Falling back to standard WS (ws://) for local development.');
+}
+
+const wssOptions = isSecure ? { server } : { host: '0.0.0.0', port: PORT };
+const wss = new WebSocketServer(wssOptions);
+// ---------------------------------------------------------
 
 wss.on('connection', (ws) => {
     let pid  = null;
@@ -106,5 +135,9 @@ wss.on('connection', (ws) => {
 });
 
 console.log('🎃  Pumpkin Collector — Multiplayer Server (Node.js)');
-console.log(`    ws://localhost:${PORT}`);
+if (isSecure) {
+    console.log(`    wss://0.0.0.0:${PORT} (Secure WebSocket)`);
+} else {
+    console.log(`    ws://0.0.0.0:${PORT}  (Unsecure WebSocket)`);
+}
 console.log('    Press Ctrl+C to stop\n');
