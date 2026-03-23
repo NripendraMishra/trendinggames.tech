@@ -1256,7 +1256,7 @@
                 countEl.textContent = count > 0 ? 'Loading... ' + count + 's' : 'Done!';
 
                 if (count <= 0) {
-                    clearInterval(tick);
+                    clearInterval(tick2);
                     const loader = document.getElementById('loader');
                     loader.style.transition = 'opacity 0.4s';
                     loader.style.opacity = '0';
