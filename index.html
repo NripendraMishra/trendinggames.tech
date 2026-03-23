@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -7,8 +8,10 @@
     <title>Pumpkin Collector – Free 3D Minecraft-Style Browser Game | TrendingGames.tech</title>
 
     <!-- SEO -->
-    <meta name="description" content="Play Pumpkin Collector free in your browser – a 3D Minecraft-style open-world adventure. Collect pumpkins, fight wolves and leopards, protect villagers, upgrade weapons, and challenge friends in real-time multiplayer. No download required!">
-    <meta name="keywords" content="pumpkin collector, minecraft browser game, 3D open world game, free online game, multiplayer browser game, survival game, pumpkin game, trendinggames">
+    <meta name="description"
+        content="Play Pumpkin Collector free in your browser – a 3D Minecraft-style open-world adventure. Collect pumpkins, fight wolves and leopards, protect villagers, upgrade weapons, and challenge friends in real-time multiplayer. No download required!">
+    <meta name="keywords"
+        content="pumpkin collector, minecraft browser game, 3D open world game, free online game, multiplayer browser game, survival game, pumpkin game, trendinggames">
     <meta name="author" content="TrendingGames.tech">
     <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#ff9900">
@@ -17,166 +20,405 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="TrendingGames.tech">
     <meta property="og:title" content="Pumpkin Collector – Free 3D Minecraft-Style Browser Game">
-    <meta property="og:description" content="Explore an open world, collect pumpkins, fight predators, protect villagers and play with friends – all in your browser, no download needed!">
+    <meta property="og:description"
+        content="Explore an open world, collect pumpkins, fight predators, protect villagers and play with friends – all in your browser, no download needed!">
     <meta property="og:image" content="/pumpkin-collector/preview.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Pumpkin Collector – Free 3D Minecraft-Style Browser Game">
-    <meta name="twitter:description" content="Explore an open world, collect pumpkins, fight predators, protect villagers and play with friends – all in your browser, no download needed!">
+    <meta name="twitter:description"
+        content="Explore an open world, collect pumpkins, fight predators, protect villagers and play with friends – all in your browser, no download needed!">
     <meta name="twitter:image" content="/pumpkin-collector/preview.png">
 
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KPQRKT2K0Z"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
+        function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
         gtag('config', 'G-KPQRKT2K0Z');
     </script>
 
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
-        canvas { display: block; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            display: block;
+        }
 
         /* ---- Portrait-mode overlay (mobile only) ---- */
         #rotate-overlay {
             display: none;
-            position: fixed; inset: 0; z-index: 9999;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
             background: #111;
             flex-direction: column;
-            align-items: center; justify-content: center;
-            color: #f90; text-align: center;
+            align-items: center;
+            justify-content: center;
+            color: #f90;
+            text-align: center;
             font-family: 'Courier New', monospace;
         }
-        #rotate-overlay span { font-size: 72px; animation: spin 1.5s linear infinite; display: block; }
-        #rotate-overlay p { font-size: 18px; margin-top: 16px; color: #fff; }
-        @keyframes spin {
-            0%   { transform: rotate(0deg);   }
-            40%  { transform: rotate(-90deg); }
-            60%  { transform: rotate(-90deg); }
-            100% { transform: rotate(-90deg); }
+
+        #rotate-overlay span {
+            font-size: 72px;
+            animation: spin 1.5s linear infinite;
+            display: block;
         }
+
+        #rotate-overlay p {
+            font-size: 18px;
+            margin-top: 16px;
+            color: #fff;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            40% {
+                transform: rotate(-90deg);
+            }
+
+            60% {
+                transform: rotate(-90deg);
+            }
+
+            100% {
+                transform: rotate(-90deg);
+            }
+        }
+
         /* Show the overlay when the device is in portrait AND has a small width (i.e. phone/tablet) */
         @media (max-width: 900px) and (orientation: portrait) {
-            #rotate-overlay { display: flex; }
+            #rotate-overlay {
+                display: flex;
+            }
         }
 
         /* ---- Fake loader screen ---- */
         #loader {
-            position: fixed; inset: 0; z-index: 9998;
+            position: fixed;
+            inset: 0;
+            z-index: 9998;
             background: #0a0a0a;
-            display: flex; flex-direction: column; align-items: stretch;
-            color: #fff; font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            color: #fff;
+            font-family: 'Courier New', monospace;
         }
+
         /* 728×90 banner at top of loader */
         #loader-top-ad {
-            width: 100%; height: 90px; background: #000;
-            display: flex; align-items: center; justify-content: center;
+            width: 100%;
+            height: 90px;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             flex-shrink: 0;
         }
+
         /* Row below the top banner */
         #loader-row {
-            flex: 1; display: flex; flex-direction: row; align-items: stretch;
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
         }
+
         #loader-center {
-            flex: 1; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        #loader-icon { font-size: 72px; animation: loaderBob 1s ease-in-out infinite alternate; }
+
+        #loader-icon {
+            font-size: 72px;
+            animation: loaderBob 1s ease-in-out infinite alternate;
+        }
+
         @keyframes loaderBob {
-            from { transform: translateY(0);    }
-            to   { transform: translateY(-12px); }
+            from {
+                transform: translateY(0);
+            }
+
+            to {
+                transform: translateY(-12px);
+            }
         }
-        #loader h2 { font-size: 28px; color: #f90; letter-spacing: 4px; margin: 16px 0 8px; }
-        #loader-msg { font-size: 13px; color: #888; min-height: 20px; letter-spacing: 1px; margin-bottom: 24px; }
+
+        #loader h2 {
+            font-size: 28px;
+            color: #f90;
+            letter-spacing: 4px;
+            margin: 16px 0 8px;
+        }
+
+        #loader-msg {
+            font-size: 13px;
+            color: #888;
+            min-height: 20px;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+        }
+
         #loader-bar-bg {
-            width: 320px; height: 8px;
-            background: #222; border-radius: 4px; overflow: hidden;
+            width: 320px;
+            height: 8px;
+            background: #222;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 16px;
         }
+
         #loader-bar {
-            height: 100%; width: 0%; background: #f90;
-            border-radius: 4px; transition: width 0.9s linear;
+            height: 100%;
+            width: 0%;
+            background: #f90;
+            border-radius: 4px;
+            transition: width 0.9s linear;
         }
-        #loader-count { font-size: 13px; color: #555; margin-top: 10px; letter-spacing: 1px; }
+
+        #loader-count {
+            font-size: 13px;
+            color: #555;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        #loader-fs-tip {
+            margin-top: 10px;
+            background: rgba(255, 153, 0, 0.12);
+            border: 1px solid rgba(255, 153, 0, 0.4);
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 13px;
+            color: #f90;
+            letter-spacing: 0.5px;
+            text-align: center;
+            animation: fsPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes fsPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.55;
+            }
+        }
+
+        #loader-tips {
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            width: 320px;
+        }
+
+        .loader-tip {
+            font-size: 12px;
+            color: #aaa;
+            letter-spacing: 0.3px;
+            padding: 5px 10px;
+            border-left: 2px solid rgba(255, 153, 0, 0.5);
+        }
+
         /* Left panel — native banner */
         #ad-panel-left {
-            width: 220px; min-width: 220px;
-            display: flex; align-items: center; justify-content: center;
-            padding: 10px; background: rgba(0,0,0,0.3);
+            width: 220px;
+            min-width: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
         }
+
         /* Right panel — 4 × 320×50 stacked */
         #ad-panel-right {
-            width: 340px; min-width: 340px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 8px; padding: 10px; background: rgba(0,0,0,0.3);
+            width: 340px;
+            min-width: 340px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
         }
-        @media (max-width: 1100px) { #ad-panel-left, #ad-panel-right, #loader-top-ad { display: none; } }
+
+        @media (max-width: 1100px) {
+
+            #ad-panel-left,
+            #ad-panel-right,
+            #loader-top-ad {
+                display: none;
+            }
+        }
 
         /* ---- Blocker: original column layout ---- */
         #blocker {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.92); z-index: 100;
-            display: flex; align-items: center; justify-content: center;
-            flex-direction: column; color: #fff;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #fff;
         }
+
         #blocker-content {
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            overflow-y: auto; -webkit-overflow-scrolling: touch;
-            padding: 20px 12px; width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 20px 12px;
+            width: 100%;
         }
+
         #blocker h1 {
-            font-size: 48px; color: #f90; text-shadow: 3px 3px 0 #000;
-            margin-bottom: 10px; letter-spacing: 3px;
+            font-size: 48px;
+            color: #f90;
+            text-shadow: 3px 3px 0 #000;
+            margin-bottom: 10px;
+            letter-spacing: 3px;
         }
+
         #blocker h2 {
-            font-size: 24px; color: #fa0; margin-bottom: 30px;
+            font-size: 24px;
+            color: #fa0;
+            margin-bottom: 30px;
         }
+
         #blocker .instructions {
-            background: rgba(0,0,0,0.6); border: 2px solid #f90; border-radius: 8px;
-            padding: 25px 40px; max-width: 600px; text-align: left;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #f90;
+            border-radius: 8px;
+            padding: 25px 40px;
+            max-width: 600px;
+            text-align: left;
         }
+
         #blocker .instructions p {
-            margin: 6px 0; font-size: 14px; color: #ddd;
+            margin: 6px 0;
+            font-size: 14px;
+            color: #ddd;
         }
-        #blocker .instructions span { color: #f90; font-weight: bold; }
+
+        #blocker .instructions span {
+            color: #f90;
+            font-weight: bold;
+        }
+
         #blocker .start-btn {
-            margin-top: 25px; padding: 15px 50px; font-size: 20px;
-            background: #f90; color: #000; border: none; cursor: pointer;
-            font-family: 'Courier New', monospace; font-weight: bold;
-            border-radius: 4px; letter-spacing: 2px;
+            margin-top: 25px;
+            padding: 15px 50px;
+            font-size: 20px;
+            background: #f90;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border-radius: 4px;
+            letter-spacing: 2px;
         }
-        #blocker .start-btn:hover { background: #fa0; }
+
+        #blocker .start-btn:hover {
+            background: #fa0;
+        }
 
         /* Mobile-specific start screen — compact, no keyboard hints */
         @media (max-width: 900px) {
-            #blocker-content { align-items: stretch; justify-content: flex-start; }
-            #blocker h1 { font-size: 26px; margin-bottom: 4px; text-align: center; }
-            #blocker h2 { font-size: 14px; margin-bottom: 10px; text-align: center; }
-            .instructions-desktop { display: none; } /* hide keyboard controls on touch */
-            #blocker .instructions {
-                padding: 12px 16px; font-size: 12px;
+            #blocker-content {
+                align-items: stretch;
+                justify-content: flex-start;
             }
-            #blocker .instructions p { margin: 4px 0; font-size: 12px; }
-            .difficulty-panel { margin-top: 10px; padding: 10px; }
-            .difficulty-btn { min-width: 80px; padding: 6px 10px; font-size: 12px; }
+
+            #blocker h1 {
+                font-size: 26px;
+                margin-bottom: 4px;
+                text-align: center;
+            }
+
+            #blocker h2 {
+                font-size: 14px;
+                margin-bottom: 10px;
+                text-align: center;
+            }
+
+            .instructions-desktop {
+                display: none;
+            }
+
+            /* hide keyboard controls on touch */
+            #blocker .instructions {
+                padding: 12px 16px;
+                font-size: 12px;
+            }
+
+            #blocker .instructions p {
+                margin: 4px 0;
+                font-size: 12px;
+            }
+
+            .difficulty-panel {
+                margin-top: 10px;
+                padding: 10px;
+            }
+
+            .difficulty-btn {
+                min-width: 80px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
             #blocker .start-btn {
-                font-size: 18px; padding: 14px 40px; margin-top: 14px;
+                font-size: 18px;
+                padding: 14px 40px;
+                margin-top: 14px;
                 align-self: center;
             }
         }
 
         .difficulty-panel {
             margin-top: 16px;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0, 0, 0, 0.6);
             border: 2px solid #f90;
             border-radius: 8px;
             padding: 12px;
             width: 100%;
             max-width: 600px;
         }
+
         .difficulty-title {
             color: #f90;
             font-size: 14px;
@@ -184,12 +426,14 @@
             text-align: center;
             letter-spacing: 1px;
         }
+
         .difficulty-buttons {
             display: flex;
             gap: 10px;
             justify-content: center;
             flex-wrap: wrap;
         }
+
         .difficulty-btn {
             pointer-events: auto;
             background: #222;
@@ -202,11 +446,13 @@
             cursor: pointer;
             min-width: 120px;
         }
+
         .difficulty-btn.active {
             background: #f90;
             color: #111;
             border-color: #f90;
         }
+
         .difficulty-help {
             margin-top: 8px;
             font-size: 12px;
@@ -215,245 +461,547 @@
         }
 
         #hud {
-            position: fixed; top: 0; left: 0; width: 100%; z-index: 50;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 50;
             pointer-events: none;
         }
+
         #hud-top {
-            display: flex; justify-content: space-between; padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 25px;
         }
+
         .hud-box {
-            background: rgba(0,0,0,0.7); border: 2px solid #555;
-            padding: 8px 16px; border-radius: 4px; color: #fff; font-size: 16px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #555;
+            padding: 8px 16px;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 16px;
         }
-        .hud-box span { color: #f90; font-weight: bold; }
+
+        .hud-box span {
+            color: #f90;
+            font-weight: bold;
+        }
 
         #crosshair {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 50; pointer-events: none; font-size: 24px; color: #fff;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+            pointer-events: none;
+            font-size: 24px;
+            color: #fff;
             text-shadow: 0 0 4px #000;
         }
 
         #health-bar-container {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 50; pointer-events: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            pointer-events: none;
         }
+
         /* Fullscreen restore button — above attack button, touch only */
         #fs-btn {
-            position: absolute; right: 0; bottom: 82px;
-            width: 62px; height: 40px;
-            background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.25);
-            color: #fff; font-size: 18px; border-radius: 8px;
-            display: none; align-items: center; justify-content: center;
-            cursor: pointer; z-index: 52;
-            pointer-events: auto; touch-action: manipulation;
+            position: absolute;
+            right: 0;
+            bottom: 82px;
+            width: 62px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            font-size: 18px;
+            border-radius: 8px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 52;
+            pointer-events: auto;
+            touch-action: manipulation;
         }
-        #fs-btn:active { background: rgba(255,153,0,0.45); border-color: #f90; }
+
+        #fs-btn:active {
+            background: rgba(255, 153, 0, 0.45);
+            border-color: #f90;
+        }
+
         #health-bar-bg {
-            width: 300px; height: 20px; background: rgba(0,0,0,0.7);
-            border: 2px solid #555; border-radius: 3px;
+            width: 300px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #555;
+            border-radius: 3px;
         }
+
         #health-bar {
-            width: 100%; height: 100%; background: #4a4; border-radius: 2px;
+            width: 100%;
+            height: 100%;
+            background: #4a4;
+            border-radius: 2px;
             transition: width 0.3s;
         }
+
         #health-text {
-            text-align: center; color: #fff; font-size: 12px; margin-top: 4px;
+            text-align: center;
+            color: #fff;
+            font-size: 12px;
+            margin-top: 4px;
         }
 
         #danger-compass {
-            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
-            z-index: 55; pointer-events: none;
-            flex-direction: column; align-items: center; gap: 5px;
+            position: fixed;
+            top: 72px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 55;
+            pointer-events: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
             display: none;
         }
+
         .danger-card {
-            background: rgba(160,0,0,0.88); border: 2px solid #ff4444;
-            border-radius: 8px; padding: 5px 16px;
-            color: #fff; font-size: 14px; font-weight: bold;
-            white-space: nowrap; letter-spacing: 0.5px;
+            background: rgba(160, 0, 0, 0.88);
+            border: 2px solid #ff4444;
+            border-radius: 8px;
+            padding: 5px 16px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
         }
 
         #message {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 60; color: #ff0; font-size: 28px; font-weight: bold;
-            text-shadow: 2px 2px 0 #000; pointer-events: none;
-            opacity: 0; transition: opacity 0.3s;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 60;
+            color: #ff0;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         #alert-message {
-            position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 60; color: #f44; font-size: 32px; font-weight: bold;
-            text-shadow: 2px 2px 0 #000; pointer-events: none;
-            opacity: 0; transition: opacity 0.3s;
+            position: fixed;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 60;
+            color: #f44;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         /* ── Multiplayer panel ── */
-        #mp-section { margin: 12px 0 4px; text-align: center; }
-        .mp-divider { color: #888; font-size: 12px; margin: 6px 0 8px; letter-spacing: 1px; }
+        #mp-section {
+            margin: 12px 0 4px;
+            text-align: center;
+        }
+
+        .mp-divider {
+            color: #888;
+            font-size: 12px;
+            margin: 6px 0 8px;
+            letter-spacing: 1px;
+        }
+
         #room-code-input {
-            background: rgba(0,0,0,0.55); border: 2px solid #666; color: #fff;
-            padding: 7px 14px; font-size: 17px; border-radius: 4px;
-            width: 170px; text-align: center; letter-spacing: 5px; font-weight: bold;
+            background: rgba(0, 0, 0, 0.55);
+            border: 2px solid #666;
+            color: #fff;
+            padding: 7px 14px;
+            font-size: 17px;
+            border-radius: 4px;
+            width: 170px;
+            text-align: center;
+            letter-spacing: 5px;
+            font-weight: bold;
             outline: none;
         }
-        #room-code-input::placeholder { letter-spacing: 1px; font-weight: normal; color: #777; font-size: 12px; }
-        #room-code-input:focus { border-color: #f90; }
-        #mp-status { color: #ff0; font-size: 13px; min-height: 18px; margin-top: 5px; }
-        #mp-hud { font-size: 14px; }
+
+        #room-code-input::placeholder {
+            letter-spacing: 1px;
+            font-weight: normal;
+            color: #777;
+            font-size: 12px;
+        }
+
+        #room-code-input:focus {
+            border-color: #f90;
+        }
+
+        #mp-status {
+            color: #ff0;
+            font-size: 13px;
+            min-height: 18px;
+            margin-top: 5px;
+        }
+
+        #mp-hud {
+            font-size: 14px;
+        }
+
         #mp-hud .code-chip {
-            background: rgba(255,153,0,0.25); border: 1px solid #f90;
-            border-radius: 3px; padding: 0 5px; letter-spacing: 2px; font-family: monospace;
+            background: rgba(255, 153, 0, 0.25);
+            border: 1px solid #f90;
+            border-radius: 3px;
+            padding: 0 5px;
+            letter-spacing: 2px;
+            font-family: monospace;
         }
 
         #shop-panel {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 90; background: rgba(0,0,0,0.9); border: 3px solid #f90;
-            border-radius: 8px; padding: 30px; color: #fff; display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 90;
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #f90;
+            border-radius: 8px;
+            padding: 30px;
+            color: #fff;
+            display: none;
             min-width: 400px;
         }
-        #shop-panel h2 { color: #f90; text-align: center; margin-bottom: 20px; }
+
+        #shop-panel h2 {
+            color: #f90;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
         .shop-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px; margin: 8px 0; background: rgba(255,255,255,0.05);
-            border: 1px solid #444; border-radius: 4px; pointer-events: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 8px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            border-radius: 4px;
+            pointer-events: auto;
         }
+
         .shop-item button {
-            padding: 6px 16px; background: #f90; border: none; cursor: pointer;
-            font-family: 'Courier New', monospace; font-weight: bold; border-radius: 3px;
+            padding: 6px 16px;
+            background: #f90;
+            border: none;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border-radius: 3px;
         }
-        .shop-item button:hover { background: #fa0; }
-        .shop-item button:disabled { background: #555; cursor: not-allowed; }
+
+        .shop-item button:hover {
+            background: #fa0;
+        }
+
+        .shop-item button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
 
         #minimap {
-            position: fixed; bottom: 20px; right: 20px; z-index: 50;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 50;
             pointer-events: none;
         }
+
         #minimap canvas {
-            border: 2px solid #555; border-radius: 4px;
+            border: 2px solid #555;
+            border-radius: 4px;
         }
 
         #game-over {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 200; display: none;
-            align-items: center; justify-content: center; flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
             color: #fff;
         }
-        #game-over h1 { font-size: 48px; color: #f44; margin-bottom: 20px; }
-        #game-over p { font-size: 20px; margin: 5px 0; }
+
+        #game-over h1 {
+            font-size: 48px;
+            color: #f44;
+            margin-bottom: 20px;
+        }
+
+        #game-over p {
+            font-size: 20px;
+            margin: 5px 0;
+        }
+
         #game-over button {
-            margin-top: 25px; padding: 15px 40px; font-size: 18px;
-            background: #f90; border: none; cursor: pointer;
-            font-family: 'Courier New', monospace; font-weight: bold;
+            margin-top: 25px;
+            padding: 15px 40px;
+            font-size: 18px;
+            background: #f90;
+            border: none;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
             border-radius: 4px;
         }
 
         /* ===================== TOUCH CONTROLS ===================== */
         #touch-controls {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
-            z-index: 55; pointer-events: none; display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 55;
+            pointer-events: none;
+            display: none;
         }
 
         /* Left joystick */
         #joystick-zone {
-            position: absolute; bottom: 30px; left: 30px;
-            width: 130px; height: 130px;
-            pointer-events: auto; touch-action: none;
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 130px;
+            height: 130px;
+            pointer-events: auto;
+            touch-action: none;
         }
+
         #joystick-base {
-            width: 130px; height: 130px; border-radius: 50%;
-            background: rgba(255,255,255,0.10);
-            border: 3px solid rgba(255,255,255,0.35);
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.10);
+            border: 3px solid rgba(255, 255, 255, 0.35);
             position: relative;
         }
+
         #joystick-knob {
-            width: 52px; height: 52px; border-radius: 50%;
-            background: rgba(255,255,255,0.45);
-            border: 2px solid rgba(255,255,255,0.75);
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%,-50%);
-            pointer-events: none; transition: background 0.1s;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.45);
+            border: 2px solid rgba(255, 255, 255, 0.75);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            transition: background 0.1s;
         }
 
         /* Right action buttons */
         #touch-buttons {
-            position: absolute; bottom: 90px; right: 20px;
-            width: 210px; height: 160px;
+            position: absolute;
+            bottom: 90px;
+            right: 20px;
+            width: 210px;
+            height: 160px;
             pointer-events: none;
         }
+
         .touch-btn {
-            position: absolute; border-radius: 50%;
-            background: rgba(0,0,0,0.55);
-            border: 2px solid rgba(255,255,255,0.4);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; user-select: none; -webkit-user-select: none;
-            touch-action: manipulation; pointer-events: auto;
-            font-family: 'Courier New', monospace; font-weight: bold;
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.55);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            pointer-events: auto;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
             transition: background 0.08s, border-color 0.08s;
         }
-        .touch-btn:active, .touch-btn.pressed {
-            background: rgba(255,153,0,0.55); border-color: #f90;
+
+        .touch-btn:active,
+        .touch-btn.pressed {
+            background: rgba(255, 153, 0, 0.55);
+            border-color: #f90;
         }
+
         /* Attack – large, bottom-right */
         #btn-attack {
-            width: 76px; height: 76px; right: 0; bottom: 0;
-            border-radius: 16px; font-size: 28px;
-            background: rgba(190,40,40,0.65); border-color: rgba(255,100,100,0.7);
+            width: 76px;
+            height: 76px;
+            right: 0;
+            bottom: 0;
+            border-radius: 16px;
+            font-size: 28px;
+            background: rgba(190, 40, 40, 0.65);
+            border-color: rgba(255, 100, 100, 0.7);
         }
-        #btn-attack:active, #btn-attack.pressed {
-            background: rgba(255,70,70,0.75); border-color: #ff6666;
+
+        #btn-attack:active,
+        #btn-attack.pressed {
+            background: rgba(255, 70, 70, 0.75);
+            border-color: #ff6666;
         }
+
         /* Jump */
-        #btn-jump { width: 62px; height: 62px; right: 82px; bottom: 0; font-size: 22px; }
+        #btn-jump {
+            width: 62px;
+            height: 62px;
+            right: 82px;
+            bottom: 0;
+            font-size: 22px;
+        }
+
         /* Sprint (hold) */
-        #btn-sprint { width: 62px; height: 62px; right: 148px; bottom: 0; font-size: 20px; }
+        #btn-sprint {
+            width: 62px;
+            height: 62px;
+            right: 148px;
+            bottom: 0;
+            font-size: 20px;
+        }
+
         /* Collect */
-        #btn-collect { width: 62px; height: 62px; right: 82px; bottom: 70px; font-size: 22px; }
+        #btn-collect {
+            width: 62px;
+            height: 62px;
+            right: 82px;
+            bottom: 70px;
+            font-size: 22px;
+        }
+
         /* Shop */
-        #btn-shop { width: 52px; height: 52px; right: 155px; bottom: 72px; font-size: 18px; }
+        #btn-shop {
+            width: 52px;
+            height: 52px;
+            right: 155px;
+            bottom: 72px;
+            font-size: 18px;
+        }
 
         /* Sprint active indicator */
-        #btn-sprint.pressed { background: rgba(0,200,100,0.55); border-color: #0f8; }
+        #btn-sprint.pressed {
+            background: rgba(0, 200, 100, 0.55);
+            border-color: #0f8;
+        }
 
         /* Ad countdown overlay */
         #ad-overlay {
-            display: none; position: fixed; inset: 0; z-index: 300;
-            background: rgba(0,0,0,0.88);
-            flex-direction: column; align-items: center; justify-content: center;
-            color: #fff; text-align: center;
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: rgba(0, 0, 0, 0.88);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-align: center;
         }
-        #ad-overlay p { font-size: 18px; color: #aaa; margin-bottom: 12px; letter-spacing: 1px; }
+
+        #ad-overlay p {
+            font-size: 18px;
+            color: #aaa;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
         #ad-countdown {
-            font-size: 96px; font-weight: bold; color: #f90;
-            text-shadow: 0 0 30px #f90; line-height: 1;
+            font-size: 96px;
+            font-weight: bold;
+            color: #f90;
+            text-shadow: 0 0 30px #f90;
+            line-height: 1;
         }
-        #ad-reward-msg { font-size: 22px; margin-top: 20px; color: #fff; }
+
+        #ad-reward-msg {
+            font-size: 22px;
+            margin-top: 20px;
+            color: #fff;
+        }
 
         /* FREE +5 ad button — sits in HUD top bar */
         #ad-coins-btn {
-            cursor: pointer; pointer-events: auto;
-            color: #4f4; border-color: #4f4;
-            user-select: none; animation: freeAdPulse 2s ease-in-out infinite;
+            cursor: pointer;
+            pointer-events: auto;
+            color: #4f4;
+            border-color: #4f4;
+            user-select: none;
+            animation: freeAdPulse 2s ease-in-out infinite;
             font-size: 13px;
         }
-        #ad-coins-btn:hover { background: rgba(68,255,68,0.15); }
-        #ad-coins-btn.ad-btn-cooldown {
-            color: #666; border-color: #444;
-            cursor: not-allowed; animation: none; opacity: 0.7;
+
+        #ad-coins-btn:hover {
+            background: rgba(68, 255, 68, 0.15);
         }
+
+        #ad-coins-btn.ad-btn-cooldown {
+            color: #666;
+            border-color: #444;
+            cursor: not-allowed;
+            animation: none;
+            opacity: 0.7;
+        }
+
         @keyframes freeAdPulse {
-            0%, 100% { box-shadow: none; }
-            50%       { box-shadow: 0 0 8px #4f4; }
+
+            0%,
+            100% {
+                box-shadow: none;
+            }
+
+            50% {
+                box-shadow: 0 0 8px #4f4;
+            }
         }
 
         /* Look-area hint (brief, fades) */
         #look-hint {
-            position: fixed; top: 50%; right: 20px;
-            transform: translateY(-50%); z-index: 54;
-            color: rgba(255,255,255,0.25); font-size: 11px; pointer-events: none;
-            display: none; text-align: center; line-height: 1.6;
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            z-index: 54;
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 11px;
+            pointer-events: none;
+            display: none;
+            text-align: center;
+            line-height: 1.6;
         }
     </style>
 </head>
+
 <body>
     <!-- Rotate-to-landscape overlay (shown in portrait on small screens) -->
     <div id="rotate-overlay">
@@ -466,7 +1014,7 @@
 
         <!-- 728×90 banner across the top of the loader -->
         <div id="loader-top-ad">
-            <script>atOptions={'key':'e3531973283ffa51e464905f502f3eb9','format':'iframe','height':90,'width':728,'params':{}};</script>
+            <script>atOptions = { 'key': 'e3531973283ffa51e464905f502f3eb9', 'format': 'iframe', 'height': 90, 'width': 728, 'params': {} };</script>
             <script src="https://www.highperformanceformat.com/e3531973283ffa51e464905f502f3eb9/invoke.js"></script>
         </div>
 
@@ -475,7 +1023,8 @@
 
             <!-- Left: 1 Native Banner -->
             <div id="ad-panel-left">
-                <script async="async" data-cfasync="false" src="https://pl28960532.profitablecpmratenetwork.com/cbd35e716661e6ac8e9a00a8dedaaeea/invoke.js"></script>
+                <script async="async" data-cfasync="false"
+                    src="https://pl28960532.profitablecpmratenetwork.com/cbd35e716661e6ac8e9a00a8dedaaeea/invoke.js"></script>
                 <div id="container-cbd35e716661e6ac8e9a00a8dedaaeea"></div>
             </div>
 
@@ -484,19 +1033,21 @@
                 <div id="loader-icon">🎃</div>
                 <h2>PUMPKIN COLLECTOR</h2>
                 <div id="loader-msg">Initialising world...</div>
-                <div id="loader-bar-bg"><div id="loader-bar"></div></div>
+                <div id="loader-bar-bg">
+                    <div id="loader-bar"></div>
+                </div>
                 <div id="loader-count">Loading... 10s</div>
             </div>
 
             <!-- Right: 4 × 320×50 banners stacked vertically -->
             <div id="ad-panel-right">
-                <script>atOptions={'key':'da4e4db1eac2cdf2b33e1c1ab744f69a','format':'iframe','height':50,'width':320,'params':{}};</script>
+                <script>atOptions = { 'key': 'da4e4db1eac2cdf2b33e1c1ab744f69a', 'format': 'iframe', 'height': 50, 'width': 320, 'params': {} };</script>
                 <script src="https://www.highperformanceformat.com/da4e4db1eac2cdf2b33e1c1ab744f69a/invoke.js"></script>
-                <script>atOptions={'key':'da4e4db1eac2cdf2b33e1c1ab744f69a','format':'iframe','height':50,'width':320,'params':{}};</script>
+                <script>atOptions = { 'key': 'da4e4db1eac2cdf2b33e1c1ab744f69a', 'format': 'iframe', 'height': 50, 'width': 320, 'params': {} };</script>
                 <script src="https://www.highperformanceformat.com/da4e4db1eac2cdf2b33e1c1ab744f69a/invoke.js"></script>
-                <script>atOptions={'key':'da4e4db1eac2cdf2b33e1c1ab744f69a','format':'iframe','height':50,'width':320,'params':{}};</script>
+                <script>atOptions = { 'key': 'da4e4db1eac2cdf2b33e1c1ab744f69a', 'format': 'iframe', 'height': 50, 'width': 320, 'params': {} };</script>
                 <script src="https://www.highperformanceformat.com/da4e4db1eac2cdf2b33e1c1ab744f69a/invoke.js"></script>
-                <script>atOptions={'key':'da4e4db1eac2cdf2b33e1c1ab744f69a','format':'iframe','height':50,'width':320,'params':{}};</script>
+                <script>atOptions = { 'key': 'da4e4db1eac2cdf2b33e1c1ab744f69a', 'format': 'iframe', 'height': 50, 'width': 320, 'params': {} };</script>
                 <script src="https://www.highperformanceformat.com/da4e4db1eac2cdf2b33e1c1ab744f69a/invoke.js"></script>
             </div>
 
@@ -533,12 +1084,13 @@
                     <button class="difficulty-btn active" data-difficulty="normal">NORMAL</button>
                     <button class="difficulty-btn" data-difficulty="hard">HARD</button>
                 </div>
-                <div class="difficulty-help" id="difficulty-help">Normal: balanced guards, predators and pumpkin spawn.</div>
+                <div class="difficulty-help" id="difficulty-help">Normal: balanced guards, predators and pumpkin spawn.
+                </div>
             </div>
             <div id="mp-section">
                 <div class="mp-divider">─── MULTIPLAYER (optional) ───</div>
                 <input id="room-code-input" type="text" maxlength="5" inputmode="numeric"
-                       placeholder="Enter 5-digit code to join" autocomplete="off">
+                    placeholder="Enter 5-digit code to join" autocomplete="off">
                 <div id="mp-status"></div>
             </div>
             <button class="start-btn" id="start-btn">CLICK TO PLAY</button>
@@ -550,7 +1102,8 @@
         <div id="hud-top">
             <div class="hud-box">🎃 Pumpkins: <span id="pumpkin-count">0</span></div>
             <div class="hud-box">🪙 Coins: <span id="coin-count">0</span></div>
-            <div id="ad-coins-btn" class="hud-box" onclick="game.watchAdForReward('coins')" style="display:none">🪙 FREE +5</div>
+            <div id="ad-coins-btn" class="hud-box" onclick="game.watchAdForReward('coins')" style="display:none">🪙 FREE
+                +5</div>
             <div class="hud-box">⚔️ <span id="weapon-level">Pistol</span></div>
             <div class="hud-box" id="hp-box">❤️ HP: <span id="hp-display">100</span></div>
             <div class="hud-box" id="mp-hud" style="display:none">
@@ -563,7 +1116,9 @@
     <div id="crosshair">+</div>
 
     <div id="health-bar-container" style="display:none">
-        <div id="health-bar-bg"><div id="health-bar"></div></div>
+        <div id="health-bar-bg">
+            <div id="health-bar"></div>
+        </div>
         <div id="health-text">HP: 100/100</div>
     </div>
 
@@ -604,11 +1159,11 @@
         <p>Pumpkins collected: <span id="final-pumpkins">0</span></p>
         <p>Coins earned: <span id="final-coins">0</span></p>
         <button id="ad-revive-btn" onclick="game.watchAdForReward('revive')"
-                style="margin-top:20px;padding:14px 40px;font-size:17px;background:#27ae60;border:none;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;border-radius:4px;color:#fff;letter-spacing:1px;">
+            style="margin-top:20px;padding:14px 40px;font-size:17px;background:#27ae60;border:none;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;border-radius:4px;color:#fff;letter-spacing:1px;">
             📺 WATCH AD TO REVIVE
         </button>
         <button onclick="location.reload()"
-                style="margin-top:10px;padding:15px 40px;font-size:18px;background:#f90;border:none;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;border-radius:4px;">
+            style="margin-top:10px;padding:15px 40px;font-size:18px;background:#f90;border:none;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;border-radius:4px;">
             PLAY AGAIN
         </button>
     </div>
@@ -630,12 +1185,12 @@
         </div>
         <!-- Right: action buttons -->
         <div id="touch-buttons">
-            <div id="btn-shop"    class="touch-btn" title="Shop">🏪</div>
+            <div id="btn-shop" class="touch-btn" title="Shop">🏪</div>
             <div id="btn-collect" class="touch-btn" title="Collect">🎃</div>
-            <div id="btn-sprint"  class="touch-btn" title="Sprint (hold)">🏃</div>
-            <div id="btn-jump"    class="touch-btn" title="Jump">⬆️</div>
+            <div id="btn-sprint" class="touch-btn" title="Sprint (hold)">🏃</div>
+            <div id="btn-jump" class="touch-btn" title="Jump">⬆️</div>
             <div id="fs-btn" onclick="game._restoreFullscreen()" title="Fullscreen">⛶</div>
-            <div id="btn-attack"  class="touch-btn" title="Attack">⚔️</div>
+            <div id="btn-attack" class="touch-btn" title="Attack">⚔️</div>
         </div>
     </div>
     <div id="look-hint">DRAG<br>TO<br>LOOK</div>
@@ -657,8 +1212,18 @@
                 'Compiling shaders...',
                 'Almost ready...'
             ];
-            const msgEl   = document.getElementById('loader-msg');
-            const barEl   = document.getElementById('loader-bar');
+
+            const tips = [
+                "🎃 Collect pumpkins scattered across the world",
+                "🛡️ Steal pumpkins from guards without being caught",
+                " Tap the ⛶ button to enter Full Screen",
+                "⚔️ Protect villagers from predators for rewards",
+                " Tap the ⛶ button to enter Full Screen",
+                "🏪 Sell pumpkins for coins, upgrade your weapons"
+            ]
+
+            const msgEl = document.getElementById('loader-msg');
+            const barEl = document.getElementById('loader-bar');
             const countEl = document.getElementById('loader-count');
             let count = 10, step = 0;
 
@@ -669,7 +1234,25 @@
                 count--;
                 step++;
                 barEl.style.width = ((10 - count) / 10 * 100) + '%';
-                msgEl.textContent  = steps[step % steps.length];
+                msgEl.textContent = steps[step % steps.length];
+                countEl.textContent = count > 0 ? 'Loading... ' + count + 's' : 'Done!';
+
+                if (count <= 0) {
+                    clearInterval(tick);
+                    const loader = document.getElementById('loader');
+                    loader.style.transition = 'opacity 0.4s';
+                    loader.style.opacity = '0';
+                    setTimeout(function () {
+                        loader.style.display = 'none';
+                        document.getElementById('blocker').style.display = 'flex';
+                    }, 400);
+                }
+            }, 1000);
+            const tick2 = setInterval(function () {
+                count--;
+                step++;
+                barEl.style.width = ((10 - count) / 10 * 100) + '%';
+                msgEl.textContent = tips[step % tips.length];
                 countEl.textContent = count > 0 ? 'Loading... ' + count + 's' : 'Done!';
 
                 if (count <= 0) {
@@ -685,5 +1268,7 @@
             }, 1000);
         })();
     </script>
+    <script src="https://pl28963947.profitablecpmratenetwork.com/c6/69/ab/c669ab7905526dae253cbed6d8d9f037.js"></script>
 </body>
+
 </html>
