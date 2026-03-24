@@ -61,6 +61,165 @@ const SimplexNoise = (function () {
 })();
 
 // ============================================================
+// VOXEL CHUNK SYSTEM CONSTANTS
+// ============================================================
+const BLOCK = { AIR:0, GRASS:1, DIRT:2, STONE:3, WATER:4, SNOW:5, SAND:6 };
+const BLOCK_COLORS = {
+  [BLOCK.GRASS]: [0.27, 0.54, 0.18],
+  [BLOCK.DIRT]:  [0.47, 0.32, 0.18],
+  [BLOCK.STONE]: [0.50, 0.50, 0.50],
+  [BLOCK.WATER]: [0.10, 0.40, 0.80],
+  [BLOCK.SNOW]:  [0.90, 0.92, 0.95],
+  [BLOCK.SAND]:  [0.82, 0.76, 0.50],
+};
+const CHUNK_SIZE = 16;   // XZ blocks per chunk
+const CHUNK_HEIGHT = 64; // Y blocks per chunk
+const SEA_LEVEL = -5;    // matches waterLevel in updatePlayer
+
+// ============================================================
+// CHUNK MANAGER
+// ============================================================
+class ChunkManager {
+  constructor(game) {
+    this.game = game;
+    this.chunks = new Map(); // key: "cx,cz" → { mesh, blocks, hfBody }
+    this.renderDist = 8;     // chunks around player (8 = 128 world units)
+  }
+
+  generateChunkBlocks(cx, cz) {
+    const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        const wx = cx * CHUNK_SIZE + lx;
+        const wz = cz * CHUNK_SIZE + lz;
+        const surfaceF = this.game.getHeight(wx, wz);
+        const surface = Math.floor(surfaceF);
+        for (let y = 0; y < CHUNK_HEIGHT; y++) {
+          const worldY = y - 32; // center: y=32 → worldY=0
+          let type = BLOCK.AIR;
+          if (worldY === surface)
+            type = surfaceF > 8 ? BLOCK.SNOW : (surfaceF < SEA_LEVEL ? BLOCK.SAND : BLOCK.GRASS);
+          else if (worldY < surface && worldY >= surface - 3)
+            type = BLOCK.DIRT;
+          else if (worldY < surface - 3)
+            type = BLOCK.STONE;
+          if (worldY < SEA_LEVEL && type === BLOCK.AIR)
+            type = BLOCK.WATER;
+          blocks[lx * CHUNK_HEIGHT * CHUNK_SIZE + y * CHUNK_SIZE + lz] = type;
+        }
+      }
+    }
+    return blocks;
+  }
+
+  buildChunkMesh(cx, cz, blocks) {
+    const positions = [], colors = [], indices = [];
+    let vi = 0;
+    const FACES = [
+      { dir:[0,1,0],  verts:[[-1,1,-1],[1,1,-1],[1,1,1],[-1,1,1]] },
+      { dir:[0,-1,0], verts:[[-1,-1,1],[1,-1,1],[1,-1,-1],[-1,-1,-1]] },
+      { dir:[1,0,0],  verts:[[1,-1,-1],[1,1,-1],[1,1,1],[1,-1,1]] },
+      { dir:[-1,0,0], verts:[[-1,-1,1],[-1,1,1],[-1,1,-1],[-1,-1,-1]] },
+      { dir:[0,0,1],  verts:[[-1,-1,1],[-1,1,1],[1,1,1],[1,-1,1]] },
+      { dir:[0,0,-1], verts:[[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,-1]] },
+    ];
+    const idx = (lx, y, lz) => lx * CHUNK_HEIGHT * CHUNK_SIZE + y * CHUNK_SIZE + lz;
+    const getB = (lx, y, lz) => {
+      if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE || y < 0 || y >= CHUNK_HEIGHT)
+        return BLOCK.AIR;
+      return blocks[idx(lx, y, lz)];
+    };
+    for (let lx = 0; lx < CHUNK_SIZE; lx++)
+      for (let y = 0; y < CHUNK_HEIGHT; y++)
+        for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+          const b = blocks[idx(lx, y, lz)];
+          if (b === BLOCK.AIR || b === BLOCK.WATER) continue;
+          const wx = cx * CHUNK_SIZE + lx + 0.5;
+          const wy = y - 32 + 0.5;
+          const wz = cz * CHUNK_SIZE + lz + 0.5;
+          const col = BLOCK_COLORS[b] || [1, 0, 1];
+          for (const f of FACES) {
+            const nx = lx + f.dir[0], ny = y + f.dir[1], nz = lz + f.dir[2];
+            const nb = getB(nx, ny, nz);
+            if (nb !== BLOCK.AIR && nb !== BLOCK.WATER) continue;
+            for (const v of f.verts) {
+              positions.push(wx + v[0] * 0.5, wy + v[1] * 0.5, wz + v[2] * 0.5);
+              colors.push(...col);
+            }
+            indices.push(vi, vi+1, vi+2, vi, vi+2, vi+3);
+            vi += 4;
+          }
+        }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+    return new THREE.Mesh(geo, mat);
+  }
+
+  getHeightfieldData(cx, cz) {
+    const N = 17;
+    const data = [];
+    for (let i = 0; i < N; i++) {
+      data.push([]);
+      for (let j = 0; j < N; j++) {
+        const wx = cx * CHUNK_SIZE + i;
+        const wz = cz * CHUNK_SIZE + j;
+        data[i].push(this.game.getHeight(wx, wz));
+      }
+    }
+    return data;
+  }
+
+  loadChunk(cx, cz, scene, physicsWorld) {
+    const key = `${cx},${cz}`;
+    if (this.chunks.has(key)) return;
+    const blocks = this.generateChunkBlocks(cx, cz);
+    const mesh = this.buildChunkMesh(cx, cz, blocks);
+    scene.add(mesh);
+    const hfData = this.getHeightfieldData(cx, cz);
+    const hfShape = new CANNON.Heightfield(hfData, { elementSize: 1 });
+    const hfBody = new CANNON.Body({ mass: 0 });
+    hfBody.addShape(hfShape);
+    hfBody.position.set(cx * CHUNK_SIZE, 0, cz * CHUNK_SIZE);
+    physicsWorld.addBody(hfBody);
+    this.chunks.set(key, { mesh, blocks, hfBody });
+  }
+
+  unloadChunk(cx, cz, scene, physicsWorld) {
+    const key = `${cx},${cz}`;
+    const chunk = this.chunks.get(key);
+    if (!chunk) return;
+    scene.remove(chunk.mesh);
+    physicsWorld.removeBody(chunk.hfBody);
+    this.chunks.delete(key);
+  }
+
+  update(px, pz, scene, physicsWorld) {
+    const cx0 = Math.floor(px / CHUNK_SIZE);
+    const cz0 = Math.floor(pz / CHUNK_SIZE);
+    const r = this.renderDist;
+    for (let dx = -r; dx <= r; dx++)
+      for (let dz = -r; dz <= r; dz++)
+        this.loadChunk(cx0 + dx, cz0 + dz, scene, physicsWorld);
+    for (const [key] of this.chunks) {
+      const [cx, cz] = key.split(',').map(Number);
+      if (Math.abs(cx - cx0) > r + 1 || Math.abs(cz - cz0) > r + 1)
+        this.unloadChunk(cx, cz, scene, physicsWorld);
+    }
+  }
+
+  loadAll(scene, physicsWorld) {
+    const r = this.renderDist;
+    for (let dx = -r; dx <= r; dx++)
+      for (let dz = -r; dz <= r; dz++)
+        this.loadChunk(dx, dz, scene, physicsWorld);
+  }
+}
+
+// ============================================================
 // GAME CLASS
 // ============================================================
 class PumpkinCollectorGame {
@@ -251,6 +410,9 @@ class PumpkinCollectorGame {
         // Lighting
         this.setupLighting();
 
+        // Physics world + voxel chunk terrain
+        this.setupPhysics();
+
         // Events
         this.setupEvents();
 
@@ -265,6 +427,39 @@ class PumpkinCollectorGame {
                 this._restoreFullscreen();
             }
         });
+
+        // Cache DOM element references to avoid per-frame getElementById calls
+        this.dom = {
+            crosshair:       document.getElementById('crosshair'),
+            pumpkinCount:    document.getElementById('pumpkin-count'),
+            coinCount:       document.getElementById('coin-count'),
+            weaponLevel:     document.getElementById('weapon-level'),
+            hpBox:           document.getElementById('hp-box'),
+            healthBar:       document.getElementById('health-bar'),
+            healthText:      document.getElementById('health-text'),
+            dangerCompass:   document.getElementById('danger-compass'),
+            btnAttack:       document.getElementById('btn-attack'),
+            message:         document.getElementById('message'),
+            alertMessage:    document.getElementById('alert-message'),
+        };
+
+        // HUD dirty-flag tracking — previous values to skip redundant DOM writes
+        this._prevHud = {
+            pumpkins: -1,
+            coins: -1,
+            weaponText: '',
+            hp: -1,
+            maxHp: -1,
+            mpEnabled: false,
+            mpPlayerId: null,
+            mpRoomCode: null,
+        };
+
+        // Chunk manager dirty-flag — last chunk coordinates
+        this._lastChunkCoord = { cx: Infinity, cz: Infinity };
+
+        // Danger compass dirty-flag — last HTML string
+        this._prevCompassHtml = '';
 
         // Render loop (but don't update game logic until started)
         this.animate();
@@ -447,6 +642,31 @@ class PumpkinCollectorGame {
 
         const hemi = new THREE.HemisphereLight(0x88bbff, 0x445522, 0.4);
         this.scene.add(hemi);
+    }
+
+    setupPhysics() {
+        // Physics world
+        this.physicsWorld = new CANNON.World();
+        this.physicsWorld.gravity.set(0, -25, 0);
+        this.physicsWorld.broadphase = new CANNON.NaiveBroadphase();
+        this.physicsWorld.allowSleep = true;
+
+        // Player body (sphere)
+        const sphere = new CANNON.Sphere(this.player.radius);
+        this.playerBody = new CANNON.Body({ mass: 70, linearDamping: 0.99, angularDamping: 1.0 });
+        this.playerBody.addShape(sphere);
+        this.playerBody.position.set(
+            this.player.position.x,
+            this.player.position.y,
+            this.player.position.z
+        );
+        this.playerBody.fixedRotation = true;
+        this.playerBody.updateMassProperties();
+        this.physicsWorld.addBody(this.playerBody);
+
+        // Chunk manager — loads initial terrain chunks and their physics bodies
+        this.chunkManager = new ChunkManager(this);
+        this.chunkManager.loadAll(this.scene, this.physicsWorld);
     }
 
     setupEvents() {
@@ -801,59 +1021,9 @@ class PumpkinCollectorGame {
     }
 
     generateTerrain() {
-        const size = this.worldSize;
-        const res = this.terrainResolution;
-        const segments = Math.floor(size * 2 / res);
-        const geo = new THREE.PlaneGeometry(size * 2, size * 2, segments, segments);
-        geo.rotateX(-Math.PI / 2);
-
-        const positions = geo.attributes.position.array;
-        const colors = new Float32Array(positions.length);
-
-        for (let i = 0; i < positions.length; i += 3) {
-            const x = positions[i];
-            const z = positions[i + 2];
-            const h = this.getHeight(x, z);
-            positions[i + 1] = h;
-
-            // Color by biome
-            const biome = this.getBiome(x, z);
-            let r, g, b;
-            if (biome === 'water') {
-                r = 0.2; g = 0.4; b = 0.7;
-            } else if (biome === 'mountain') {
-                const snow = h > 28 ? 1 : 0;
-                r = snow ? 0.9 : 0.5;
-                g = snow ? 0.9 : 0.45;
-                b = snow ? 0.95 : 0.4;
-            } else if (biome === 'forest') {
-                r = 0.15; g = 0.45 + Math.random() * 0.1; b = 0.12;
-            } else if (biome === 'field') {
-                r = 0.6; g = 0.55; b = 0.2;
-            } else if (biome === 'plains') {
-                // Bright green flat plains
-                r = 0.35 + Math.random() * 0.05;
-                g = 0.65 + Math.random() * 0.1;
-                b = 0.2;
-            } else {
-                r = 0.3; g = 0.6 + Math.random() * 0.1; b = 0.2;
-            }
-            colors[i] = r;
-            colors[i + 1] = g;
-            colors[i + 2] = b;
-        }
-
-        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        geo.computeVertexNormals();
-
-        const mat = new THREE.MeshLambertMaterial({
-            vertexColors: true,
-            flatShading: true
-        });
-
-        this.terrainMesh = new THREE.Mesh(geo, mat);
-        this.terrainMesh.receiveShadow = true;
-        this.scene.add(this.terrainMesh);
+        // Terrain is now managed by ChunkManager (voxel chunks).
+        // Initialized in setupPhysics() which is called from init().
+        // getHeight(x,z) is unchanged and used by ChunkManager internally.
     }
 
     generateWater() {
@@ -1551,35 +1721,26 @@ class PumpkinCollectorGame {
             this.player.velocity.z *= 0.85;
         }
 
-        // Jump
+        // Jump — apply directly to cannon body while still on ground
         if (this.keys['Space'] && this.player.onGround) {
-            this.player.velocity.y = this.player.jumpForce;
+            this.playerBody.velocity.y = this.player.jumpForce;
             this.player.onGround = false;
         }
 
-        // Gravity
-        this.player.velocity.y += this.gravity * dt;
+        // Apply XZ velocity to cannon-es body (physics handles gravity + terrain collision)
+        this.playerBody.velocity.x = this.player.velocity.x;
+        this.playerBody.velocity.z = this.player.velocity.z;
 
-        // Move
-        this.player.position.x += this.player.velocity.x * dt;
-        this.player.position.z += this.player.velocity.z * dt;
-        this.player.position.y += this.player.velocity.y * dt;
+        // Sync position from physics body back to game player
+        this.player.position.x = this.playerBody.position.x;
+        this.player.position.y = this.playerBody.position.y;
+        this.player.position.z = this.playerBody.position.z;
 
-        // Terrain collision
+        // Determine onGround using terrain height
         const terrainH = this.getHeight(this.player.position.x, this.player.position.z);
-
-        // Water - don't sink below water level
         const waterLevel = -5;
         const minY = Math.max(terrainH, waterLevel) + this.player.height;
-
-        if (this.player.position.y <= minY) {
-            // Snap to ground (handles both sinking below and walking onto higher terrain)
-            this.player.position.y = minY;
-            this.player.velocity.y = 0;
-            this.player.onGround = true;
-        } else {
-            this.player.onGround = false;
-        }
+        this.player.onGround = (this.player.position.y <= minY + 0.2);
 
         // World bounds
         const bound = this.worldSize - 5;
@@ -3080,13 +3241,14 @@ class PumpkinCollectorGame {
     // ============================================================
     updateProximityHints() {
         const pos = this.player.position;
+        const ch = this.dom.crosshair;
 
         // Check near pumpkins
         for (const p of this.pumpkins) {
             if (p.userData.collected) continue;
             if (pos.distanceTo(p.position) < 5) {
-                document.getElementById('crosshair').textContent = '[ E ] Collect';
-                document.getElementById('crosshair').style.color = '#f90';
+                ch.textContent = '[ E ] Collect';
+                ch.style.color = '#f90';
                 return;
             }
         }
@@ -3095,8 +3257,8 @@ class PumpkinCollectorGame {
         for (const h of this.herbs) {
             if (h.userData.collected) continue;
             if (pos.distanceTo(h.position) < 5) {
-                document.getElementById('crosshair').textContent = '[ E ] Herb +20HP';
-                document.getElementById('crosshair').style.color = '#4caf50';
+                ch.textContent = '[ E ] Herb +20HP';
+                ch.style.color = '#4caf50';
                 return;
             }
         }
@@ -3104,14 +3266,14 @@ class PumpkinCollectorGame {
         // Check near guards
         for (const g of this.guards) {
             if (pos.distanceTo(g.position) < 5 && g.userData.alertLevel === 0) {
-                document.getElementById('crosshair').textContent = '[ E ] Steal';
-                document.getElementById('crosshair').style.color = '#f44';
+                ch.textContent = '[ E ] Steal';
+                ch.style.color = '#f44';
                 return;
             }
         }
 
-        document.getElementById('crosshair').textContent = '+';
-        document.getElementById('crosshair').style.color = '#fff';
+        ch.textContent = '+';
+        ch.style.color = '#fff';
 
         // On mobile: switch attack button to collect icon when near any collectible
         if (this.touch.mode) {
@@ -3130,10 +3292,12 @@ class PumpkinCollectorGame {
                 }
             }
             this._nearCollectible = nearCollect;
-            const ab = document.getElementById('btn-attack');
-            ab.textContent  = nearCollect ? '🎃' : '⚔️';
-            ab.style.background = nearCollect ? 'rgba(255,153,0,0.65)' : 'rgba(190,40,40,0.65)';
-            ab.style.borderColor = nearCollect ? 'rgba(255,200,0,0.7)' : 'rgba(255,100,100,0.7)';
+            const ab = this.dom.btnAttack;
+            if (ab) {
+                ab.textContent  = nearCollect ? '🎃' : '⚔️';
+                ab.style.background = nearCollect ? 'rgba(255,153,0,0.65)' : 'rgba(190,40,40,0.65)';
+                ab.style.borderColor = nearCollect ? 'rgba(255,200,0,0.7)' : 'rgba(255,100,100,0.7)';
+            }
         }
     }
 
@@ -3195,7 +3359,18 @@ class PumpkinCollectorGame {
 
         const dt = Math.min(this.clock.getDelta(), 0.05);
 
+        // Step cannon-es physics world
+        this.physicsWorld.step(1 / 60, dt, 3);
+
         this.updatePlayer(dt);
+
+        // Update voxel chunks around player
+        this.chunkManager.update(
+            this.player.position.x,
+            this.player.position.z,
+            this.scene,
+            this.physicsWorld
+        );
         this.updateGuards(dt);
         this.updateAnimals(dt);
         this.updatePredators(dt);
