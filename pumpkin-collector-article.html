@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ── SEO ── -->
+  <title>How We Built a Full 3D Browser Game with Vanilla JavaScript & Three.js | Pumpkin Collector Dev Deep Dive
+  </title>
+  <meta name="description"
+    content="A complete technical breakdown of Pumpkin Collector — a free 3D Minecraft-style browser game built with Three.js r128, procedural terrain, real-time multiplayer, and zero dependencies. Learn how it was architected, what tradeoffs were made, and what comes next." />
+  <meta name="keywords"
+    content="Three.js browser game, vanilla JavaScript game, procedural terrain generation, WebSocket multiplayer game, free browser game 2025, indie game development, open-world browser game, Minecraft-style game JavaScript, simplex noise terrain, FPS browser game" />
+  <meta name="author" content="TrendingGames.tech" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- ── Open Graph ── -->
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="How We Built a Full 3D Browser Game with Vanilla JavaScript & Three.js" />
+  <meta property="og:description"
+    content="Deep-dive into the architecture of Pumpkin Collector: procedural world generation, AI guards, real-time multiplayer, and 5 weapons — all in one 3,094-line JavaScript file." />
+  <meta property="og:image" content="/pumpkin-collector/preview.png" />
+  <meta property="og:url" content="https://trendinggames.tech/blog/pumpkin-collector-devlog" />
+  <meta property="og:site_name" content="TrendingGames.tech" />
+
+  <!-- ── Twitter Card ── -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="How We Built a Full 3D Browser Game with Vanilla JS & Three.js" />
+  <meta name="twitter:description"
+    content="Procedural terrain, real-time multiplayer, AI enemies — all in a single vanilla JS file. Here's exactly how Pumpkin Collector works under the hood." />
+  <meta name="twitter:image" content="/pumpkin-collector/preview.png" />
+
+  <!-- ── Canonical ── -->
+  <link rel="canonical" href="https://trendinggames.tech/blog/pumpkin-collector-devlog" />
+
+  <!-- ── Schema.org Article ── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "How We Built a Full 3D Browser Game with Vanilla JavaScript & Three.js",
+    "description": "A complete technical breakdown of Pumpkin Collector — a free 3D open-world browser game built with Three.js r128, procedural terrain, and real-time WebSocket multiplayer.",
+    "author": { "@type": "Organization", "name": "TrendingGames.tech" },
+    "publisher": { "@type": "Organization", "name": "TrendingGames.tech" },
+    "datePublished": "2026-03-28",
+    "dateModified": "2026-03-28",
+    "inLanguage": "en",
+    "keywords": "Three.js, browser game, vanilla JavaScript, procedural terrain, WebSocket multiplayer",
+    "articleSection": "Game Development"
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap"
+    rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Variables ── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0c0d0f;
+      --surface: #131518;
+      --surface2: #1b1d22;
+      --border: #2a2d35;
+      --accent: #f97316;
+      --accent2: #fbbf24;
+      --green: #4ade80;
+      --blue: #60a5fa;
+      --purple: #a78bfa;
+      --text: #e8e9ec;
+      --muted: #8a8d96;
+      --code-bg: #161820;
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+      --font-body: 'Lora', Georgia, serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
+    }
+
+    /* ── Layout ── */
+    .site-wrap {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Header / Hero ── */
+    .hero {
+      position: relative;
+      padding: 80px 0 64px;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 80% 20%, rgba(249, 115, 22, .12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(96, 165, 250, .08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid rgba(249, 115, 22, .3);
+      border-radius: 4px;
+      padding: 5px 12px;
+      margin-bottom: 28px;
+      animation: fadeUp .6s ease both;
+    }
+
+    .hero h1 {
+      font-family: var(--font-head);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.12;
+      letter-spacing: -.02em;
+      color: #fff;
+      max-width: 680px;
+      animation: fadeUp .7s .1s ease both;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      margin-top: 20px;
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 580px;
+      animation: fadeUp .7s .2s ease both;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 32px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+      animation: fadeUp .7s .3s ease both;
+    }
+
+    .hero-meta span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-meta .dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* ── Stats Strip ── */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 48px 0;
+      animation: fadeUp .7s .35s ease both;
+    }
+
+    .stat-cell {
+      background: var(--surface);
+      padding: 20px 18px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: var(--font-head);
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+      margin: 56px 0;
+    }
+
+    /* ── Section headings ── */
+    .article-body h2 {
+      font-family: var(--font-head);
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.02em;
+      margin: 56px 0 20px;
+      position: relative;
+      padding-left: 20px;
+    }
+
+    .article-body h2::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+    }
+
+    .article-body h3 {
+      font-family: var(--font-head);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 36px 0 12px;
+      letter-spacing: -.01em;
+    }
+
+    .article-body p {
+      margin-bottom: 20px;
+      color: #c8cad0;
+    }
+
+    .article-body strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .article-body a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* ── Code blocks ── */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 28px 0;
+      font-size: 13.5px;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .code-lang {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .code-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .code-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .code-dots span:nth-child(1) {
+      background: #ff5f57;
+    }
+
+    .code-dots span:nth-child(2) {
+      background: #febc2e;
+    }
+
+    .code-dots span:nth-child(3) {
+      background: #28c840;
+    }
+
+    .code-block pre {
+      padding: 20px;
+      overflow-x: auto;
+      line-height: 1.65;
+    }
+
+    .code-block code {
+      font-family: var(--font-mono);
+      color: #c8d3f5;
+      white-space: pre;
+    }
+
+    /* syntax colouring */
+    code .kw {
+      color: #c792ea;
+    }
+
+    code .fn {
+      color: #82aaff;
+    }
+
+    code .str {
+      color: #c3e88d;
+    }
+
+    code .num {
+      color: #f78c6c;
+    }
+
+    code .cmt {
+      color: #546e7a;
+      font-style: italic;
+    }
+
+    code .prop {
+      color: #f07178;
+    }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      border: 1px solid;
+    }
+
+    .callout-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .callout-body {
+      font-size: .95rem;
+      line-height: 1.7;
+    }
+
+    .callout-body strong {
+      display: block;
+      margin-bottom: 4px;
+      font-family: var(--font-head);
+      font-size: 1rem;
+    }
+
+    .callout.info {
+      background: rgba(96, 165, 250, .07);
+      border-color: rgba(96, 165, 250, .25);
+      color: #93c5fd;
+    }
+
+    .callout.tip {
+      background: rgba(74, 222, 128, .07);
+      border-color: rgba(74, 222, 128, .25);
+      color: #86efac;
+    }
+
+    .callout.warn {
+      background: rgba(249, 115, 22, .07);
+      border-color: rgba(249, 115, 22, .25);
+      color: #fdba74;
+    }
+
+    .callout.purple {
+      background: rgba(167, 139, 250, .07);
+      border-color: rgba(167, 139, 250, .25);
+      color: #c4b5fd;
+    }
+
+    /* ── Data table ── */
+    .data-table-wrap {
+      overflow-x: auto;
+      margin: 28px 0;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+      font-family: var(--font-mono);
+    }
+
+    .data-table th {
+      background: var(--surface2);
+      color: var(--accent);
+      font-size: .75rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-table td {
+      padding: 11px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+      color: #c8cad0;
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tr:hover td {
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .badge-gun {
+      background: rgba(96, 165, 250, .15);
+      color: var(--blue);
+    }
+
+    .badge-melee {
+      background: rgba(74, 222, 128, .15);
+      color: var(--green);
+    }
+
+    .badge-free {
+      background: rgba(74, 222, 128, .12);
+      color: var(--green);
+    }
+
+    .badge-shop {
+      background: rgba(249, 115, 22, .12);
+      color: var(--accent);
+    }
+
+    /* ── Architecture diagram ── */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 24px;
+      margin: 28px 0;
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    .arch-title {
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .arch-tree {
+      color: var(--text);
+      line-height: 2;
+    }
+
+    .arch-tree .hl {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .arch-tree .hl2 {
+      color: var(--blue);
+    }
+
+    .arch-tree .hl3 {
+      color: var(--green);
+    }
+
+    .arch-tree .dim {
+      color: var(--muted);
+    }
+
+    /* ── Pull quote ── */
+    .pull-quote {
+      border-left: 3px solid var(--accent);
+      margin: 40px 0;
+      padding: 4px 0 4px 28px;
+    }
+
+    .pull-quote p {
+      font-family: var(--font-head);
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .pull-quote cite {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+      font-style: normal;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    /* ── Tag pills ── */
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 40px 0 0;
+    }
+
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .06em;
+      padding: 5px 12px;
+      border-radius: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    /* ── TOC ── */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin: 0 0 48px;
+    }
+
+    .toc-title {
+      font-family: var(--font-head);
+      font-size: .85rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+    }
+
+    .toc li {
+      counter-increment: toc;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+    }
+
+    .toc li:last-child {
+      border-bottom: none;
+    }
+
+    .toc a {
+      color: var(--text);
+      text-decoration: none;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: color .2s;
+    }
+
+    .toc a::before {
+      content: counter(toc, decimal-leading-zero);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .toc a:hover {
+      color: var(--accent);
+    }
+
+    /* ── Footer ── */
+    .article-footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 0 64px;
+      margin-top: 64px;
+    }
+
+    .footer-cta {
+      background: linear-gradient(135deg, rgba(249, 115, 22, .12), rgba(251, 191, 36, .06));
+      border: 1px solid rgba(249, 115, 22, .25);
+      border-radius: 16px;
+      padding: 36px 32px;
+      text-align: center;
+    }
+
+    .footer-cta h3 {
+      font-family: var(--font-head);
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .footer-cta p {
+      color: var(--muted);
+      font-size: .95rem;
+      margin-bottom: 24px;
+    }
+
+    .btn-play {
+      display: inline-block;
+      background: var(--accent);
+      color: #000;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: .04em;
+      padding: 14px 36px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: transform .15s, box-shadow .15s;
+    }
+
+    .btn-play:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(249, 115, 22, .35);
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      body {
+        font-size: 16px;
+      }
+
+      .stats-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .hero h1 {
+        font-size: 1.8rem;
+      }
+    }
+
+    /* ── Page Layout for Side Ads ── */
+    .page-layout {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      max-width: 1400px;
+      margin: 0 auto;
+      gap: 20px;
+    }
+
+    .ad-side-panel {
+      width: 160px; /* Base width; Native ads will scale inside */
+      min-width: 160px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 20px;
+    }
+
+    /* Hide side ads on smaller screens where they would overlap the main content */
+    @media (max-width: 1160px) {
+      .ad-side-panel {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <script>
+    atOptions = {
+      'key': 'e3531973283ffa51e464905f502f3eb9',
+      'format': 'iframe',
+      'height': 90,
+      'width': 728,
+      'params': {}
+    };
+  </script>
+  <script src="https://www.highperformanceformat.com/e3531973283ffa51e464905f502f3eb9/invoke.js"></script>
+<script>
+  atOptions = {
+    'key' : 'e3531973283ffa51e464905f502f3eb9',
+    'format' : 'iframe',
+    'height' : 90,
+    'width' : 728,
+    'params' : {}
+  };
+</script>
+<script src="https://www.highperformanceformat.com/e3531973283ffa51e464905f502f3eb9/invoke.js"></script>
+
+  <div class="page-layout">
+    <!-- ── Left Ad Panel ── -->
+    <aside class="ad-side-panel">
+      <script async="async" data-cfasync="false" src="https://pl28960532.profitablecpmratenetwork.com/cbd35e716661e6ac8e9a00a8dedaaeea/invoke.js"></script>
+      <div id="container-cbd35e716661e6ac8e9a00a8dedaaeea"></div>
+    </aside>
+
+    <div class="site-wrap">
+
+      <!-- ── Hero ── -->
+    <header class="hero">
+      <div class="hero-tag">🎃 Game Dev Deep Dive · 2026</div>
+      <h1>How We Built a Full <em>3D Browser Game</em> with Vanilla JavaScript &amp; Three.js</h1>
+      <p class="hero-sub">A complete technical breakdown of Pumpkin Collector — procedural terrain, real-time
+        multiplayer, AI enemies, and 5 weapons, all in a single 3,094-line JavaScript file. No bundler. No framework.
+        Just the browser.</p>
+      <div class="hero-meta">
+        <span><span class="dot"></span> TrendingGames.tech</span>
+        <span><span class="dot"></span> March 28, 2026</span>
+        <span><span class="dot"></span> 14 min read</span>
+        <span><span class="dot"></span> Three.js · WebSocket · Vanilla JS</span>
+      </div>
+    </header>
+
+    <!-- ── Stats strip ── -->
+    <div class="stats-strip">
+      <div class="stat-cell">
+        <div class="stat-num">3,094</div>
+        <div class="stat-label">Lines of JS</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">0</div>
+        <div class="stat-label">Dependencies</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">6</div>
+        <div class="stat-label">Biome Types</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">400×400</div>
+        <div class="stat-label">World Units</div>
+      </div>
+    </div>
+
+    <!-- ── Article body ── -->
+    <article class="article-body" itemscope itemtype="https://schema.org/TechArticle">
+
+      <!-- Table of Contents -->
+      <nav class="toc" aria-label="Table of contents">
+        <div class="toc-title">Contents</div>
+        <ol>
+          <li><a href="#intro">The idea: a browser game that actually feels like a game</a></li>
+          <li><a href="#architecture">Architecture: one class, one file, zero regrets</a></li>
+          <li><a href="#terrain">Procedural terrain with Simplex Noise</a></li>
+          <li><a href="#ai">AI systems: guards, predators, and villagers</a></li>
+          <li><a href="#weapons">The weapons arsenal</a></li>
+          <li><a href="#multiplayer">Real-time multiplayer over WebSockets</a></li>
+          <li><a href="#mobile">Mobile-first with touch controls</a></li>
+          <li><a href="#performance">Performance decisions we actually regret</a></li>
+          <li><a href="#whats-next">What comes next</a></li>
+        </ol>
+      </nav>
+
+      <!-- Section 1 -->
+      <section id="intro">
+        <h2>The idea: a browser game that actually feels like a game</h2>
+
+        <p>There's a particular kind of game developer optimism that goes: "I'll just use Three.js and keep it simple."
+          Two months and 3,094 lines later, you have a procedurally generated open world with biome-aware terrain
+          coloring, a five-weapon arsenal, real-time WebSocket multiplayer, adaptive AI guards, mobile joystick
+          controls, and a day-night color cycle. Pumpkin Collector started as a weekend experiment and became something
+          we're genuinely proud to ship.</p>
+
+        <p>The concept is deliberately charming: roam a Minecraft-flavored landscape, collect pumpkins scattered across
+          fields and mountains, steal them from patrolling guards without getting caught, protect villagers from
+          wolf-like predators, earn coins, and upgrade your loadout. It sounds simple. Building it was not.</p>
+
+        <p>This article is the full technical story — every architecture decision, every tradeoff, and a few things we'd
+          do differently. If you're building a browser game in 2026, or you're just curious how much game logic you can
+          pack into a single vanilla JavaScript class, read on.</p>
+
+        <div class="callout info">
+          <span class="callout-icon">💡</span>
+          <div class="callout-body">
+            <strong>Play it right now</strong>
+            Pumpkin Collector runs entirely in your browser with no download, no account, and no install. Solo mode
+            needs nothing beyond a static file server. Multiplayer needs a 10-line Node.js WebSocket server.
+          </div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- Section 2 -->
+      <section id="architecture">
+        <h2>Architecture: one class, one file, zero regrets</h2>
+
+        <p>The most unusual thing about Pumpkin Collector is its architecture — or rather, its deliberate lack of one.
+          The entire game lives inside a single ES6 class called <code>PumpkinCollectorGame</code>, instantiated once as
+          a global at the bottom of <code>game.js</code>. No modules, no bundler, no webpack config, no tsconfig, no
+          build step. You open <code>index.html</code> in a browser and it works.</p>
+
+        <div class="pull-quote">
+          <p>"The entire game is one class. That's not a bug — it's a deployment model."</p>
+          <cite>Game architecture decision, day 1</cite>
+        </div>
+
+        <p>This decision was intentional. Browser games have a distribution superpower that desktop games don't: a URL.
+          Every build step you add is friction between your game and the player. By keeping everything in a single
+          script tag, Pumpkin Collector can be hosted on any CDN, embedded in any page, and forked by any developer in
+          seconds. The trade-off is that <code>game.js</code> is 3,094 lines long, but that's a readability problem, not
+          a performance problem.</p>
+
+        <div class="arch-diagram">
+          <div class="arch-title">Project structure</div>
+          <div class="arch-tree">
+            pumpkin-collector/<br>
+            ├── <span class="hl">index.html</span> <span class="dim">← HUD, shop UI, touch controls, CSS (457
+              lines)</span><br>
+            ├── <span class="hl">game.js</span> <span class="dim">← All game logic, single class (3,094
+              lines)</span><br>
+            ├── <span class="hl2">ws_server.js</span> <span class="dim">← WebSocket relay server, Node.js (111
+              lines)</span><br>
+            ├── <span class="hl3">background-score.mp3</span><br>
+            ├── <span class="hl3">leopard-attack.mp3</span><br>
+            ├── <span class="hl3">pistal-shoot.mp3</span><br>
+            ├── <span class="hl3">rifle-gunshot.mp3</span><br>
+            └── <span class="hl3">walking-sound.mp3</span>
+          </div>
+        </div>
+
+        <h3>The constructor as the entire game state</h3>
+
+        <p>The constructor of <code>PumpkinCollectorGame</code> does something that would make a software architect
+          wince: it declares every piece of mutable game state as a property. The Three.js scene, camera, renderer, the
+          clock, the noise generator, weapon definitions, audio elements, difficulty profiles, the player object, every
+          array of NPCs — all of it lives on <code>this</code>. This turns the entire game state into a single plain
+          JavaScript object, which makes debugging trivially easy (open the console, type <code>game.player</code>) and
+          serialization straightforward if you ever want to add save states.</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript — game.js (constructor excerpt)</span>
+          </div>
+          <pre><code><span class="kw">class</span> <span class="fn">PumpkinCollectorGame</span> {
+  <span class="fn">constructor</span>() {
+    <span class="cmt">// Three.js core</span>
+    <span class="kw">this</span>.<span class="prop">scene</span>    = <span class="kw">null</span>;
+    <span class="kw">this</span>.<span class="prop">camera</span>   = <span class="kw">null</span>;
+    <span class="kw">this</span>.<span class="prop">renderer</span> = <span class="kw">null</span>;
+    <span class="kw">this</span>.<span class="prop">clock</span>    = <span class="kw">new</span> <span class="fn">THREE.Clock</span>();
+    <span class="kw">this</span>.<span class="prop">noise</span>    = <span class="kw">new</span> <span class="fn">SimplexNoise</span>(<span class="num">42</span>);
+
+    <span class="cmt">// World</span>
+    <span class="kw">this</span>.<span class="prop">worldSize</span> = <span class="num">200</span>;  <span class="cmt">// ±200 units → 400×400 world</span>
+    <span class="kw">this</span>.<span class="prop">gravity</span>   = <span class="num">-25</span>;
+
+    <span class="cmt">// Entity arrays</span>
+    <span class="kw">this</span>.<span class="prop">pumpkins</span>  = [];
+    <span class="kw">this</span>.<span class="prop">guards</span>    = [];
+    <span class="kw">this</span>.<span class="prop">predators</span> = [];
+    <span class="kw">this</span>.<span class="prop">villagers</span> = [];
+    <span class="kw">this</span>.<span class="prop">animals</span>   = [];
+    <span class="kw">this</span>.<span class="prop">bullets</span>   = [];
+  }
+}</code></pre>
+        </div>
+
+        <p>The game loop itself — <code>animate()</code> — is a classic <code>requestAnimationFrame</code> callback.
+          Every frame it ticks ten subsystems in order: player physics, guard AI, animal AI, predator AI, villager AI,
+          bullet simulation, particle effects, weapon animation, skybox color update, proximity hint detection, and
+          finally the Three.js render call. DeltaTime is capped at 50ms to prevent physics tunneling on slow frames.</p>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- Section 3 -->
+      <section id="terrain">
+        <h2>Procedural terrain with Simplex Noise</h2>
+
+        <p>Pumpkin Collector's world is 400×400 units, generated fresh each session from a seeded Simplex Noise
+          function. The noise implementation is bundled directly in <code>game.js</code> — a compact, self-contained
+          IIFE — so there's no external noise library to load. Seed 42 means the world is always identical, which is
+          important for gameplay balance: we know where huts can reasonably spawn, where guards won't get stuck, and
+          roughly how many open plains exist for pumpkin placement.</p>
+
+        <h3>The two-layer height formula</h3>
+
+        <p>Rather than a single noise octave, the terrain uses a <strong>flatness mask</strong> — a second noise sample
+          at a much lower frequency (scale 0.005) that determines whether any given region should be gently rolling
+          plains or dramatic highland. If the flatness value is below 0.4, the region is flat: terrain height is capped
+          at roughly 2 units with subtle rolling. If flatness exceeds 0.4, the full range kicks in, producing hills and
+          mountains up to 40 units tall. The result is that roughly <strong>70% of the world is navigable
+            plains</strong> — flat enough for pumpkins, guards, and players to move around — while the remaining 30%
+          provides dramatic scenery and natural barriers.</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript — getHeight(x, z)</span>
+          </div>
+          <pre><code><span class="fn">getHeight</span>(x, z) {
+  <span class="kw">const</span> flatness = (<span class="kw">this</span>.<span class="prop">noise</span>.<span class="fn">noise2D</span>(x * <span class="num">0.005</span>, z * <span class="num">0.005</span>) + <span class="num">1</span>) / <span class="num">2</span>;
+
+  <span class="kw">if</span> (flatness &lt; <span class="num">0.4</span>) {
+    <span class="cmt">// Plains: gentle roll, max ~2 units</span>
+    <span class="kw">return</span> <span class="kw">this</span>.<span class="prop">noise</span>.<span class="fn">noise2D</span>(x * <span class="num">0.02</span>, z * <span class="num">0.02</span>) * <span class="num">2</span>;
+  }
+  <span class="cmt">// Highland: full range up to ~40 units</span>
+  <span class="kw">return</span> <span class="kw">this</span>.<span class="prop">noise</span>.<span class="fn">noise2D</span>(x * <span class="num">0.015</span>, z * <span class="num">0.015</span>) * <span class="num">40</span>
+       + <span class="kw">this</span>.<span class="prop">noise</span>.<span class="fn">noise2D</span>(x * <span class="num">0.05</span>,  z * <span class="num">0.05</span>)  * <span class="num">8</span>;
+}</code></pre>
+        </div>
+
+        <h3>Biomes and vertex coloring</h3>
+
+        <p>The terrain mesh is a single <code>THREE.PlaneGeometry</code> covering the entire 400×400 world. Biome
+          coloring is applied per-vertex at generation time, not via a texture — this keeps the memory footprint tiny
+          and produces that characteristic Minecraft-like flat-shaded look without any UV mapping. A second noise sample
+          (moisture, scale 0.01) combined with the height and flatness values classifies each vertex into one of six
+          biomes: water (blue-grey), mountain (stone/snow), forest (dark green), field (sandy yellow), plains (bright
+          green), or grassland (medium green).</p>
+
+        <div class="callout tip">
+          <span class="callout-icon">🌿</span>
+          <div class="callout-body">
+            <strong>Why vertex colors instead of a texture atlas?</strong>
+            Vertex colors require zero texture fetches during rendering. Combined with <code>flatShading: true</code>,
+            they produce the exact aesthetic we wanted — chunky, expressive, fast — with a single draw call for the
+            entire terrain.
+          </div>
+        </div>
+
+        <p>There's one important performance caveat here: height is computed <em>live</em> every time
+          <code>getHeight(x, z)</code> is called. There's no baked heightmap array. This means every collision check,
+          every spawn placement, every frame's player physics call re-evaluates the noise function. On modern CPUs this
+          is imperceptibly fast, but it's a design decision we'd revisit if performance became a concern on lower-end
+          mobile devices.</p>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- Section 4 -->
+      <section id="ai">
+        <h2>AI systems: guards, predators, and villagers</h2>
+
+        <p>Three distinct AI archetypes populate the world, each with their own behavioral finite state machine. They're
+          not complex — each entity has two or three states — but their interactions with each other and with the player
+          create surprisingly emergent gameplay moments.</p>
+
+        <h3>Guards: detection, pursuit, and punishment</h3>
+
+        <p>Guards patrol random waypoints and scan for the player using a <strong>dot-product field-of-view
+            check</strong>. This is worth emphasizing: there is no raycasting, no occlusion, no line-of-sight through
+          terrain. If the player is within detection range and within the forward-facing cone, the guard enters chase
+          mode regardless of whether a mountain is in the way. This is a conscious design decision — raycasting every
+          guard against terrain every frame would be expensive, and the gameplay consequence (you can't actually hide
+          behind hills from an alerted guard) turned out to be a meaningful difficulty driver rather than a bug.</p>
+
+        <p>Detection range, chase speed, and penalty values all scale with the chosen difficulty profile, allowing the
+          same AI code to serve easy, normal, and hard modes without branching logic.</p>
+
+        <div class="data-table-wrap">
+          <table class="data-table" aria-label="Difficulty profiles">
+            <thead>
+              <tr>
+                <th>Difficulty</th>
+                <th>Guards</th>
+                <th>Predators</th>
+                <th>Pumpkins</th>
+                <th>Catch HP Loss</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Easy</td>
+                <td>8</td>
+                <td>5</td>
+                <td>46</td>
+                <td>10 HP</td>
+              </tr>
+              <tr>
+                <td>Normal</td>
+                <td>12</td>
+                <td>8</td>
+                <td>35</td>
+                <td>15 HP</td>
+              </tr>
+              <tr>
+                <td>Hard</td>
+                <td>16</td>
+                <td>12</td>
+                <td>26</td>
+                <td>22 HP</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Predators: the danger compass system</h3>
+
+        <p>Predators (wolf-like entities) hunt animals and villagers. When a predator locks onto a target, a dynamic
+          danger indicator appears in the HUD — a directional compass card showing which villager is under threat and
+          from which bearing. This was one of the most impactful UX additions in the whole game: it transforms abstract
+          NPC violence happening off-screen into an urgent spatial problem for the player to solve.</p>
+
+        <p>The predator AI has a <code>_forceAttackTimer</code> that guarantees the first attack happens no earlier than
+          10 seconds after game start, giving new players time to orient themselves before the world becomes hostile.
+        </p>
+
+        <h3>Villagers: flee and reward</h3>
+
+        <p>Villagers wander randomly between waypoints. When a predator enters their threat radius, they flee. If the
+          player kills the predator before the villager is harmed, a coin reward drops — a simple mechanic that creates
+          a compelling moment-to-moment objective loop without any quest system.</p>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- Section 5 -->
+      <section id="weapons">
+        <h2>The weapons arsenal</h2>
+
+        <p>Pumpkin Collector ships with five weapons that span a wide range of playstyles. Sword and pistol are free
+          starting equipment; shotgun, rifle, and sniper must be unlocked with coins earned by selling pumpkins. The
+          progression feels genuinely earned because early-game resources are scarce.</p>
+
+        <div class="data-table-wrap">
+          <table class="data-table" aria-label="Weapon stats">
+            <thead>
+              <tr>
+                <th>Weapon</th>
+                <th>Type</th>
+                <th>Damage</th>
+                <th>Range</th>
+                <th>Cooldown</th>
+                <th>Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Sword</td>
+                <td><span class="badge badge-melee">Melee</span></td>
+                <td>15 + level×3</td>
+                <td>3u + upgrades</td>
+                <td>0.5s</td>
+                <td><span class="badge badge-free">Free</span></td>
+              </tr>
+              <tr>
+                <td>Pistol</td>
+                <td><span class="badge badge-gun">Gun</span></td>
+                <td>12</td>
+                <td>40u</td>
+                <td>0.4s</td>
+                <td><span class="badge badge-free">Free</span></td>
+              </tr>
+              <tr>
+                <td>Shotgun</td>
+                <td><span class="badge badge-gun">Gun</span></td>
+                <td>8×5 pellets</td>
+                <td>20u</td>
+                <td>0.8s</td>
+                <td><span class="badge badge-shop">30 coins</span></td>
+              </tr>
+              <tr>
+                <td>Rifle</td>
+                <td><span class="badge badge-gun">Gun</span></td>
+                <td>25</td>
+                <td>80u</td>
+                <td>0.7s</td>
+                <td><span class="badge badge-shop">60 coins</span></td>
+              </tr>
+              <tr>
+                <td>Sniper</td>
+                <td><span class="badge badge-gun">Gun</span></td>
+                <td>50</td>
+                <td>150u</td>
+                <td>1.5s</td>
+                <td><span class="badge badge-shop">100 coins</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Ranged weapons fire discrete bullet meshes — small box geometries that travel through the scene each frame —
+          rather than instant raycasts. This is a deliberate visual choice: watching a sniper round cross the full
+          150-unit engagement range is more satisfying than an invisible raycast hit, and the bullet travel time adds a
+          subtle skill gap for long-range shots against moving targets.</p>
+
+        <p>The sword is uniquely upgradeable via the shop, increasing both damage (by 3 per level) and range (by 0.5
+          units per level). This makes melee a viable late-game option against predators at close range, and gives
+          players a secondary upgrade path beyond buying new guns.</p>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- Section 6 -->
+      <section id="multiplayer">
+        <h2>Real-time multiplayer over WebSockets</h2>
+
+        <p>Multiplayer in Pumpkin Collector is opt-in and elegantly minimal. Players share a 5-digit room code; the
+          WebSocket server — all 111 lines of it — broadcasts each player's position, rotation, health, and animation
+          state to everyone else in the room. Remote players appear as simple humanoid meshes with animated limbs,
+          labeled with their player number.</p>
+
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <div class="callout-body">
+            <strong>Honest caveat: it's position relay only</strong>
+            The multiplayer server performs zero game logic validation. Pumpkin collection is honor-system — if two
+            players grab the same pumpkin simultaneously, the client that processed the collect first wins, and the
+            other player's count simply desyncs. This is a known limitation, not a bug we haven't fixed yet.
+          </div>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-lang">JavaScript — WebSocket sync payload</span>
+          </div>
+          <pre><code><span class="cmt">// Broadcast own state at max 20fps</span>
+<span class="fn">_syncMpState</span>(dt) {
+  <span class="kw">if</span> (!<span class="kw">this</span>.<span class="prop">mp</span>.<span class="prop">connected</span>) <span class="kw">return</span>;
+  <span class="kw">this</span>.<span class="prop">mp</span>.<span class="prop">syncTimer</span> += dt;
+  <span class="kw">if</span> (<span class="kw">this</span>.<span class="prop">mp</span>.<span class="prop">syncTimer</span> &lt; <span class="num">0.05</span>) <span class="kw">return</span>;  <span class="cmt">// 20 fps cap</span>
+  <span class="kw">this</span>.<span class="prop">mp</span>.<span class="prop">syncTimer</span> = <span class="num">0</span>;
+
+  <span class="kw">this</span>.<span class="prop">mp</span>.<span class="prop">ws</span>.<span class="fn">send</span>(<span class="fn">JSON.stringify</span>({
+    <span class="prop">type</span>: <span class="str">'state'</span>,
+    <span class="prop">pos</span>:  <span class="kw">this</span>.<span class="prop">player</span>.<span class="prop">position</span>,
+    <span class="prop">yaw</span>:  <span class="kw">this</span>.<span class="prop">yaw</span>,
+    <span class="prop">hp</span>:   <span class="kw">this</span>.<span class="prop">player</span>.<span class="prop">hp</span>,
+    <span class="prop">anim</span>: <span class="kw">this</span>.<span class="prop">player</span>.<span class="prop">isSprinting</span> ? <span class="str">'sprint'</span> : <span class="str">'walk'</span>
+  }));
+}</code></pre>
+        </div>
+
+        <p>For a casual browser game this is the right tradeoff. Full server-side authoritative multiplayer would
+          require a complete rewrite of the game loop and a significantly more complex server. The position-relay
+          approach means any developer can spin up the multiplayer backend with a single <code>node ws_server.js</code>
+          command and have friends playing together in under a minute.</p>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- Section 7 -->
+      <section id="mobile">
+        <h2>Mobile-first with touch controls</h2>
+
+        <p>A browser game that only works on desktop is leaving a majority of its potential audience behind —
+          particularly in markets across Europe and the US where mobile gaming now accounts for more than half of all
+          casual gaming sessions. Pumpkin Collector detects touch capability on load and swaps in a full virtual control
+          layer.</p>
+
+        <p>The left side of the screen hosts a virtual joystick with a 130px base and 42px maximum thumb radius. The
+          right side handles camera look — any touch drag on the right 45% of the screen that isn't the joystick is
+          interpreted as a look input, mirroring the dual-stick layout of every major mobile FPS on the market. Action
+          buttons (attack, jump, sprint, collect, shop) cluster in the bottom-right corner.</p>
+
+        <div class="callout purple">
+          <span class="callout-icon">📱</span>
+          <div class="callout-body">
+            <strong>Portrait mode guard</strong>
+            On mobile, Pumpkin Collector locks to landscape orientation via
+            <code>screen.orientation.lock('landscape')</code> and requests fullscreen automatically. If a player somehow
+            loads it in portrait mode, a CSS media query (<code>max-width: 900px and (orientation: portrait)</code>)
+            triggers a rotating animation overlay asking them to flip their device.
+          </div>
+        </div>
+
+        <p>Head bob — a ±0.05 unit vertical camera oscillation during walking and ±0.08 during sprinting — is present on
+          mobile too, adding to the sense of physical presence in the world. It's a small detail that disproportionately
+          affects how "game-like" the experience feels.</p>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- Section 8 -->
+      <section id="performance">
+        <h2>Performance decisions we actually regret</h2>
+
+        <p>The game works well on modern hardware, but there are several architectural decisions that would become
+          bottlenecks at scale or on constrained devices. Being honest about them matters for anyone using this codebase
+          as a learning resource.</p>
+
+        <p><strong>No terrain chunking.</strong> The entire 400×400 world is a single <code>THREE.PlaneGeometry</code>.
+          This works because the geometry is static after generation, but it means the full terrain is always in the GPU
+          regardless of where the player is. A chunked approach (loading and unloading 16×16 sections) would improve
+          memory usage and enable larger worlds.</p>
+
+        <p><strong>Live height computation.</strong> As mentioned earlier, <code>getHeight(x, z)</code> re-evaluates
+          Simplex Noise every call. On a fast CPU this is fine. On a mid-range Android device running a complex frame,
+          it adds up. Baking a heightmap array at generation time would eliminate this entirely.</p>
+
+        <p><strong>Guard FoV is dot-product only.</strong> No occlusion means guards can "see" through mountains. For
+          the current world scale this reads as a difficulty feature, but at larger scales or in denser geometry it
+          would feel broken.</p>
+
+        <p><strong>No object pooling.</strong> Bullets, particles, and floating text are created and destroyed as
+          JavaScript objects every time they're needed. At high fire rates this creates GC pressure. An object pool for
+          bullets would be a straightforward optimization for anyone looking to improve the codebase.</p>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- Section 9 -->
+      <section id="whats-next">
+        <h2>What comes next</h2>
+
+        <p>The roadmap for Pumpkin Collector is driven by what players actually ask for. A few items stand out as
+          high-impact and technically tractable in the near term.</p>
+
+        <p>A <strong>minimap</strong> — a small canvas overlay rendering the world top-down — is the most-requested
+          feature. It's achievable with a secondary orthographic camera rendering to a <code>WebGLRenderTarget</code>,
+          then drawn onto a 2D canvas element in the corner of the HUD.</p>
+
+        <p>A proper <strong>day-night cycle</strong> with actual light level changes (rather than just the current
+          subtle fog color shift) would dramatically improve atmosphere. The infrastructure is there — a
+          <code>DirectionalLight</code> and a <code>HemisphereLight</code> already exist in the scene. Animating their
+          intensity and color over a 10-minute cycle is a well-scoped addition.</p>
+
+        <p><strong>Server-side multiplayer validation</strong> is the most complex item on the list. Moving pumpkin
+          collection acknowledgment to the server would eliminate the race condition in multiplayer, but it requires the
+          server to maintain a copy of world state — a significant scope increase for what is currently a 111-line relay
+          script.</p>
+
+        <p>Longer term: weather effects, a quest system, more biome variety (desert and snow regions are already
+          partially designed), and pack behavior for predators — wolves that coordinate hunts rather than attacking solo
+          — are all ideas we're excited about.</p>
+
+        <div class="callout tip">
+          <span class="callout-icon">🚀</span>
+          <div class="callout-body">
+            <strong>Want to contribute?</strong>
+            The entire codebase is readable in two files. If you're learning Three.js, game physics, or procedural
+            generation, forking Pumpkin Collector and adding one of the features above is an excellent hands-on project
+            with a working starting point.
+          </div>
+        </div>
+      </section>
+
+      <!-- Tags -->
+      <div class="tags">
+        <span class="tag">three.js</span>
+        <span class="tag">vanilla-js</span>
+        <span class="tag">browser-game</span>
+        <span class="tag">procedural-generation</span>
+        <span class="tag">simplex-noise</span>
+        <span class="tag">websocket-multiplayer</span>
+        <span class="tag">game-dev</span>
+        <span class="tag">webgl</span>
+        <span class="tag">mobile-gaming</span>
+        <span class="tag">indie-dev</span>
+      </div>
+
+    </article>
+
+    <!-- ── Footer CTA ── -->
+    <footer class="article-footer">
+      <div class="footer-cta">
+        <h3>🎃 Ready to play?</h3>
+        <p>No download. No account. Open your browser and go — it takes about 10 seconds to load.</p>
+        <a href="/" class="btn-play">Play Pumpkin Collector Free →</a>
+      </div>
+    </footer>
+
+    </div><!-- /site-wrap -->
+
+    <!-- ── Right Ad Panel ── -->
+    <aside class="ad-side-panel">
+      <script async="async" data-cfasync="false" src="https://pl28960532.profitablecpmratenetwork.com/cbd35e716661e6ac8e9a00a8dedaaeea/invoke.js"></script>
+      <div id="container-cbd35e716661e6ac8e9a00a8dedaaeea"></div>
+    </aside>
+
+  </div><!-- /page-layout -->
+  <script src="https://pl28963947.profitablecpmratenetwork.com/c6/69/ab/c669ab7905526dae253cbed6d8d9f037.js"></script>
+
+</body>
+
+</html>
