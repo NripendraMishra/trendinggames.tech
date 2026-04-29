@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Game2 Assets Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; font-family: monospace; color: #eee; }
+
+  h1 {
+    text-align: center;
+    padding: 18px;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: #7DF9FF;
+    text-shadow: 0 0 10px #7DF9FF88;
+  }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    padding: 10px 24px 30px;
+  }
+
+  .card {
+    background: #0d0d1a;
+    border: 1px solid #2a2a4a;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .card canvas { display: block; width: 100% !important; height: auto !important; }
+
+  .label {
+    padding: 8px 0 10px;
+    font-size: 13px;
+    color: #aad4ff;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<h1>&#9632; GAME2 — MINECRAFT ASSETS PREVIEW</h1>
+<div id="grid"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="assets.js"></script>
+<script>
+(function () {
+  const assets = [
+    { label: 'Male Player',   fn: () => GameAssets.createMalePlayer(),   camY: 1.1, camZ: 4.2 },
+    { label: 'Female Player', fn: () => GameAssets.createFemalePlayer(), camY: 1.1, camZ: 4.2 },
+    { label: 'Rabbit',        fn: () => GameAssets.createRabbit(),        camY: 0.5, camZ: 2.2 },
+    { label: 'Deer',          fn: () => GameAssets.createDeer(),          camY: 1.0, camZ: 4.8 },
+    { label: 'Wolf',          fn: () => GameAssets.createWolf(),          camY: 0.8, camZ: 3.8 },
+  ];
+
+  const W = 260, H = 320;
+
+  assets.forEach(({ label, fn, camY, camZ }) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    // --- Three.js mini-scene ---
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(0x16213e);
+    card.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x16213e);
+    scene.fog = new THREE.FogExp2(0x16213e, 0.08);
+
+    const camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 100);
+    camera.position.set(2.2, camY, camZ);
+    camera.lookAt(0, camY * 0.85, 0);
+
+    // Ground
+    const ground = new THREE.Mesh(
+      new THREE.BoxGeometry(6, 0.2, 6),
+      new THREE.MeshLambertMaterial({ color: 0x2d5a1b, flatShading: true })
+    );
+    ground.position.y = -0.1;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Checkerboard grid overlay
+    for (let gx = -2; gx <= 2; gx++) {
+      for (let gz = -2; gz <= 2; gz++) {
+        if ((gx + gz) % 2 === 0) {
+          const tile = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 0.01, 1),
+            new THREE.MeshLambertMaterial({ color: 0x3a7025, flatShading: true })
+          );
+          tile.position.set(gx, 0.01, gz);
+          scene.add(tile);
+        }
+      }
+    }
+
+    // Lighting
+    const ambient = new THREE.AmbientLight(0x6688cc, 0.55);
+    scene.add(ambient);
+
+    const sun = new THREE.DirectionalLight(0xffeedd, 1.1);
+    sun.position.set(4, 8, 5);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(512, 512);
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x4466aa, 0.35);
+    fill.position.set(-3, 2, -3);
+    scene.add(fill);
+
+    // Asset
+    const model = fn();
+    model.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+    scene.add(model);
+
+    // Auto-rotate
+    let angle = 0.3;
+    (function animate() {
+      requestAnimationFrame(animate);
+      angle += 0.008;
+      model.rotation.y = angle;
+      renderer.render(scene, camera);
+    })();
+
+    const lbl = document.createElement('div');
+    lbl.className = 'label';
+    lbl.textContent = label;
+    card.appendChild(lbl);
+
+    document.getElementById('grid').appendChild(card);
+  });
+})();
+</script>
+</body>
+</html>
