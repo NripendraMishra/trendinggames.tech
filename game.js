@@ -202,12 +202,13 @@ class PumpkinCollectorGame {
 
         // Multiplayer state
         this.mp = {
-            enabled:       false,
-            ws:            null,
-            roomCode:      null,
-            playerId:      null,
-            remotePlayers: {},   // id → { mesh, walkTimer }
-            syncTimer:     0
+            enabled:          false,
+            ws:               null,
+            roomCode:         null,
+            playerId:         null,
+            remotePlayers:    {},   // id → { mesh, walkTimer }
+            syncTimer:        0,
+            pumpkinSyncTimer: 0
         };
         this.entities = [];
 
@@ -733,6 +734,19 @@ class PumpkinCollectorGame {
                 pumpkins: this.player.pumpkins
             }
         }));
+
+        // P1 broadcasts pumpkin world positions to bots every 2s
+        if (this.mp.playerId === 1) {
+            this.mp.pumpkinSyncTimer += 0.05;
+            if (this.mp.pumpkinSyncTimer >= 2) {
+                this.mp.pumpkinSyncTimer = 0;
+                const positions = this.pumpkins.map(p => ({
+                    x: parseFloat(p.position.x.toFixed(2)),
+                    z: parseFloat(p.position.z.toFixed(2))
+                }));
+                this.mp.ws.send(JSON.stringify({ type: 'worldState', pumpkins: positions }));
+            }
+        }
     }
 
     // ============================================================
