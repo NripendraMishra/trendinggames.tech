@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Voxel FPS — TrendingGames</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #000; color: #fff; font-family: 'Courier New', monospace; overflow: hidden; }
+
+/* ── Canvas ── */
+#game-canvas { position: fixed; inset: 0; }
+#game-canvas canvas { display: block; }
+
+/* ── Blocker / Start Screen ── */
+#blocker {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.88);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+}
+#blocker h1 { font-size: 2.8rem; color: #f90; letter-spacing: 4px; text-transform: uppercase; }
+#blocker p  { color: #aaa; font-size: 0.9rem; text-align: center; max-width: 420px; line-height: 1.6; }
+#blocker input {
+    background: #111; border: 2px solid #f90; color: #fff; font-family: inherit;
+    font-size: 1.1rem; padding: 10px 18px; width: 220px; text-align: center; letter-spacing: 4px;
+    outline: none; border-radius: 6px;
+}
+#blocker input::placeholder { color: #555; letter-spacing: 1px; }
+#play-btn {
+    background: #f90; color: #000; border: none; font-family: inherit;
+    font-size: 1.1rem; font-weight: bold; padding: 14px 40px; cursor: pointer;
+    letter-spacing: 3px; border-radius: 6px; text-transform: uppercase;
+    transition: background 0.15s;
+}
+#play-btn:hover { background: #ffb020; }
+#mp-status { color: #f90; font-size: 0.85rem; min-height: 1.2em; }
+
+/* ── HUD ── */
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 50; display: none; }
+
+/* Crosshair */
+#crosshair {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    color: #fff; font-size: 1.4rem; text-shadow: 0 0 4px #000; user-select: none;
+    font-weight: bold;
+}
+
+/* HP bar */
+#hp-bar-wrap {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(0,0,0,0.55); padding: 6px 14px; border-radius: 8px; border: 1px solid #444;
+}
+#hp-bar-wrap span { font-size: 0.8rem; color: #aaa; }
+#hp-bar { width: 200px; height: 14px; background: #222; border-radius: 4px; overflow: hidden; }
+#hp-fill { height: 100%; width: 100%; background: #2ecc40; transition: width 0.15s, background 0.3s; }
+#hp-text { font-size: 0.85rem; color: #eee; min-width: 28px; text-align: right; }
+
+/* K/D + room code top-center */
+#score-hud {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.55); padding: 5px 18px; border-radius: 6px; border: 1px solid #444;
+    font-size: 0.85rem; display: flex; gap: 18px; align-items: center;
+}
+#kd-display   { color: #f90; font-weight: bold; }
+#mp-hud       { color: #aaa; display: none; }
+#mp-hud span  { color: #f90; font-weight: bold; }
+
+/* Kill feed top-right */
+#kill-feed {
+    position: absolute; top: 14px; right: 16px;
+    display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
+}
+.kf-entry {
+    background: rgba(0,0,0,0.65); border: 1px solid #555;
+    padding: 3px 10px; border-radius: 4px; font-size: 0.78rem; color: #eee;
+    animation: kfFade 4s forwards;
+}
+@keyframes kfFade { 0%{opacity:1} 75%{opacity:1} 100%{opacity:0} }
+
+/* Message center */
+#message {
+    position: absolute; top: 38%; left: 50%; transform: translateX(-50%);
+    color: #ff0; font-size: 1rem; text-shadow: 0 0 6px #000;
+    text-align: center; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; white-space: nowrap;
+}
+
+/* Back link */
+#back-link {
+    position: absolute; top: 12px; left: 16px;
+    color: #aaa; font-size: 0.8rem; text-decoration: none;
+    background: rgba(0,0,0,0.55); padding: 4px 12px; border-radius: 5px; border: 1px solid #444;
+    pointer-events: all;
+}
+#back-link:hover { color: #f90; }
+
+/* Death overlay */
+#death-overlay {
+    position: fixed; inset: 0; z-index: 80; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: rgba(200,0,0,0.35); pointer-events: none;
+}
+#death-overlay h2 { font-size: 2rem; color: #ff4136; text-shadow: 0 0 10px #f00; }
+#respawn-timer    { font-size: 3.5rem; color: #fff; font-weight: bold; }
+
+/* Win screen */
+#win-screen {
+    position: fixed; inset: 0; z-index: 90; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: rgba(0,0,0,0.85);
+}
+#win-screen h2  { font-size: 3rem; color: #f90; }
+#win-screen p   { color: #eee; }
+#restart-btn {
+    background: #f90; color: #000; border: none; font-family: inherit;
+    font-size: 1rem; font-weight: bold; padding: 12px 36px; cursor: pointer;
+    letter-spacing: 2px; border-radius: 6px; text-transform: uppercase; margin-top: 10px;
+}
+#restart-btn:hover { background: #ffb020; }
+
+/* Scoreboard */
+#scoreboard {
+    position: fixed; inset: 0; z-index: 70; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.75);
+}
+#scoreboard table {
+    border-collapse: collapse; min-width: 320px;
+    background: rgba(0,0,0,0.85); border: 2px solid #f90; border-radius: 8px; overflow: hidden;
+}
+#scoreboard th { background: #f90; color: #000; padding: 8px 20px; font-size: 0.9rem; }
+#scoreboard td { padding: 7px 20px; text-align: center; font-size: 0.85rem; border-bottom: 1px solid #333; }
+#scoreboard tr.me td { color: #f90; font-weight: bold; }
+
+/* Touch controls */
+#touch-controls {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 200px;
+    pointer-events: none; display: none; z-index: 60;
+}
+#joystick-area {
+    position: absolute; left: 20px; bottom: 20px;
+    width: 130px; height: 130px; border-radius: 50%;
+    background: rgba(255,255,255,0.12); border: 2px solid rgba(255,153,0,0.5);
+    pointer-events: all;
+}
+#look-area {
+    position: fixed; right: 0; top: 0; bottom: 200px; width: 55%;
+    pointer-events: all;
+}
+#shoot-btn {
+    position: absolute; right: 20px; bottom: 20px;
+    width: 72px; height: 72px; border-radius: 50%;
+    background: rgba(255,80,0,0.7); border: 2px solid #f90;
+    font-size: 1.4rem; display: flex; align-items: center; justify-content: center;
+    pointer-events: all; user-select: none;
+}
+#jump-btn {
+    position: absolute; right: 110px; bottom: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(80,80,255,0.6); border: 2px solid #66f;
+    font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+    pointer-events: all; user-select: none;
+}
+</style>
+</head>
+<body>
+
+<!-- Canvas mount -->
+<div id="game-canvas"></div>
+
+<!-- Start / Pause blocker -->
+<div id="blocker">
+    <h1>Voxel FPS</h1>
+    <p>First to <strong style="color:#f90">20 kills</strong> wins.<br>
+       WASD to move &nbsp;·&nbsp; Mouse to aim &nbsp;·&nbsp; Click to shoot &nbsp;·&nbsp; Tab for scoreboard</p>
+    <input id="room-code-input" type="text" maxlength="5" placeholder="Room code (blank = create)" autocomplete="off">
+    <button id="play-btn" onclick="game.startGame()">CLICK TO PLAY</button>
+    <div id="mp-status"></div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+    <div id="crosshair">+</div>
+
+    <!-- HP bar -->
+    <div id="hp-bar-wrap">
+        <span>HP</span>
+        <div id="hp-bar"><div id="hp-fill"></div></div>
+        <div id="hp-text">100</div>
+    </div>
+
+    <!-- Score + room code -->
+    <div id="score-hud">
+        <div id="kd-display">K:0  D:0</div>
+        <div id="mp-hud">P<span id="player-num">?</span> &nbsp;·&nbsp; Room&nbsp;<span id="room-code-display"></span></div>
+    </div>
+
+    <!-- Kill feed -->
+    <div id="kill-feed"></div>
+
+    <!-- Center message -->
+    <div id="message"></div>
+
+    <!-- Back link -->
+    <a id="back-link" href="games.html">&#8592; Games</a>
+</div>
+
+<!-- Death overlay -->
+<div id="death-overlay">
+    <h2>YOU DIED</h2>
+    <div id="respawn-timer">3</div>
+    <p style="color:#eee;font-size:0.9rem">Respawning…</p>
+</div>
+
+<!-- Win screen -->
+<div id="win-screen">
+    <h2>VICTORY!</h2>
+    <p>You reached <strong id="win-kills"></strong> kills!</p>
+    <button id="restart-btn" onclick="location.reload()">PLAY AGAIN</button>
+</div>
+
+<!-- Scoreboard (Tab) -->
+<div id="scoreboard">
+    <table>
+        <thead><tr><th>Player</th><th>Kills</th><th>Deaths</th></tr></thead>
+        <tbody id="score-tbody"></tbody>
+    </table>
+</div>
+
+<!-- Touch controls -->
+<div id="touch-controls">
+    <div id="joystick-area"></div>
+    <div id="look-area"></div>
+    <div id="shoot-btn">🔫</div>
+    <div id="jump-btn">⬆</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="fps.js"></script>
+</body>
+</html>

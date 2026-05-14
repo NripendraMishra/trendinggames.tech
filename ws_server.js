@@ -114,6 +114,19 @@ wss.on('connection', (ws) => {
         } else if (t === 'snatch' && code && rooms[code]) {
             const targetWs = rooms[code].players.get(Number(msg.targetId));
             if (targetWs) send(targetWs, { type: 'snatched', fromId: pid, amount: msg.amount || 0 });
+
+        // ── RELAY WORLD STATE (pumpkin positions from P1) ─────────────────
+        } else if (t === 'worldState' && code && rooms[code]) {
+            broadcast(rooms[code], pid, { type: 'worldState', pumpkins: msg.pumpkins || [] });
+
+        // ── RELAY HIT (FPS damage) ────────────────────────────────────────
+        } else if (t === 'hit' && code && rooms[code]) {
+            const targetWs = rooms[code].players.get(Number(msg.targetId));
+            if (targetWs) send(targetWs, { type: 'damaged', fromId: pid, damage: msg.damage || 0, headshot: !!msg.headshot });
+
+        // ── RELAY KILLED (FPS kill feed) ──────────────────────────────────
+        } else if (t === 'killed' && code && rooms[code]) {
+            broadcast(rooms[code], null, { type: 'killed', killerId: pid, victimId: msg.victimId });
         }
     });
 

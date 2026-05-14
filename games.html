@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrendingGames — Choose a Game</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    background: #000; color: #fff; font-family: 'Courier New', monospace;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 40px; padding: 30px;
+}
+h1 { font-size: 2rem; color: #f90; letter-spacing: 4px; text-transform: uppercase; text-align: center; }
+.cards { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+.card {
+    width: 280px; background: #111; border: 2px solid #333;
+    border-radius: 12px; padding: 28px 24px; display: flex; flex-direction: column;
+    gap: 14px; text-decoration: none; color: inherit;
+    transition: border-color 0.2s, transform 0.15s;
+}
+.card:hover { border-color: #f90; transform: translateY(-4px); }
+.card-icon  { font-size: 3.5rem; text-align: center; }
+.card h2    { font-size: 1.25rem; color: #f90; text-align: center; letter-spacing: 2px; }
+.card p     { font-size: 0.82rem; color: #aaa; line-height: 1.6; text-align: center; }
+.tag {
+    align-self: center; background: #f90; color: #000;
+    font-size: 0.7rem; font-weight: bold; letter-spacing: 2px;
+    padding: 3px 10px; border-radius: 4px; text-transform: uppercase;
+}
+footer { color: #444; font-size: 0.75rem; }
+</style>
+</head>
+<body>
+<h1>TrendingGames</h1>
+<div class="cards">
+    <a class="card" href="index.html">
+        <div class="card-icon">🎃</div>
+        <h2>Pumpkin Collector</h2>
+        <p>Explore a 3D open world, steal pumpkins, fight off wolves and guards, and dominate the leaderboard in multiplayer.</p>
+        <span class="tag">3D Open World</span>
+    </a>
+    <a class="card" href="fps.html">
+        <div class="card-icon">🔫</div>
+        <h2>Voxel FPS</h2>
+        <p>Fast-paced voxel shooter. First to 20 kills wins. Play solo or jump into a room with friends using a 5-digit code.</p>
+        <span class="tag">Multiplayer FPS</span>
+    </a>
+</div>
+<footer>trendinggames.tech</footer>
+</body>
+</html>
