@@ -92,7 +92,8 @@ class PumpkinCollectorGame {
             rifle:      makeAudio('rifle-gunshot.mp3',   false, 0.8),
             walking:    makeAudio('walking-sound.mp3',   true,  0.4),
             leopard:    makeAudio('leopard-attack.mp3',  false, 0.9),
-            bgScore:    makeAudio('background-score.mp3', true, 0.3)
+            bgScore:    makeAudio('background-score.mp3', true, 0.3),
+            achieve:    makeAudio('achieve.mp3', false, 1.0)
         };
         this._walkingPlaying  = false;
         this._leopardCooldown = 0;
@@ -1676,8 +1677,8 @@ class PumpkinCollectorGame {
                 h.userData.collected = true;
                 this.scene.remove(h);
                 this.herbs.splice(i, 1);
-                this.player.hp = Math.min(this.player.maxHp, this.player.hp + 20);
-                this.showMessage('+20 HP 🌿 Medicinal Herb!');
+                this.player.hp = Math.min(this.player.maxHp, this.player.hp + 5);
+                this.showMessage('+5 HP 🌿 Medicinal Herb!');
                 this.updateHUD();
                 // Respawn herb after 60s
                 setTimeout(() => { this.spawnSingleHerb(); }, 60000);
@@ -1698,6 +1699,11 @@ class PumpkinCollectorGame {
                 this.player.pumpkins++;
                 this.spawnCollectionEffect(collectPos);
                 this.showMessage('+1 Pumpkin! 🎃');
+                const t = this.player.pumpkins;
+                if (t === 50 || t === 100 || (t > 100 && t % 100 === 0)) {
+                    this.sfx.achieve.currentTime = 0;
+                    this.sfx.achieve.play().catch(() => {});
+                }
                 this.updateHUD();
                 if (typeof gtag === 'function') {
                     gtag('event', 'pumpkin_collected', {
@@ -3095,7 +3101,7 @@ class PumpkinCollectorGame {
         for (const h of this.herbs) {
             if (h.userData.collected) continue;
             if (pos.distanceTo(h.position) < 5) {
-                document.getElementById('crosshair').textContent = '[ E ] Herb +20HP';
+                document.getElementById('crosshair').textContent = '[ E ] Herb +5HP';
                 document.getElementById('crosshair').style.color = '#4caf50';
                 return;
             }
